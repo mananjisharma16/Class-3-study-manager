@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Class 3 Study Manager"
+description = "A colorful mobile-friendly study dashboard for parents to guide a Class 3 child's subjects, practice, tests, photos, and progress."
+version = "1.0.0"
+id = "artifacts/class-3-study-manager"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21726
+
+[services.development]
+run = "pnpm --filter @workspace/class-3-study-manager run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/class-3-study-manager", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/class-3-study-manager/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21726"
+BASE_PATH = "/"
