@@ -23,7 +23,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { practiceItems, subjects, tests, type Subject } from '@/lib/study-data';
+import { getSubjectContent, practiceItems, subjects, tests, type Subject } from '@/lib/study-data';
 
 const navItems = [
   { href: '/', label: 'Home', icon: HomeIcon },
@@ -143,9 +143,58 @@ function SubjectPage() {
   const [, params] = useRoute('/subject/:subjectId');
   const subject = subjects.find((item) => item.id === params?.subjectId) || subjects[0];
   const [tab, setTab] = useState('Chapters');
-  const tabs = ['Chapters', 'Study Photos', 'Questions', 'Answers', 'Tests', 'Results', 'Mistakes'];
-  const chapters = ['Getting Started', subject.next, 'Practice Together', 'Revision corner'];
-  return <Shell><div className="animate-rise-in"><Link href="/" className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980] hover:text-[#244238] focus-ring" data-testid="link-back-home"><ArrowLeft size={15} /> Back to subjects</Link><div className="mb-7 flex flex-col justify-between gap-5 rounded-[24px] p-6 sm:flex-row sm:items-center sm:p-8" style={{ backgroundColor: subject.tint }}><div className="flex items-center gap-4"><span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/70 text-2xl font-bold" style={{ color: subject.color }}>{subject.icon}</span><div><p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em]" style={{ color: subject.color }}>Your notebook</p><h2 className="display-serif text-[32px] font-bold leading-none text-[#244238]">{subject.name}</h2><p className="mt-2 text-xs text-[#65746C]">Next up: {subject.next}</p></div></div><div className="w-full max-w-[170px]"><div className="mb-2 flex justify-between text-xs font-bold text-[#65746C]"><span>Progress</span><span>{subject.progress}%</span></div><ProgressBar value={subject.progress} color={subject.color} /></div></div><div className="mb-6 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <button key={item} onClick={() => setTab(item)} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${tab === item ? 'bg-[#244238] text-[#FFF9E9]' : 'border border-[#E5DCCF] bg-[#FFFDF7] text-[#718077] hover:border-[#B9CFC3]'}`} data-testid={`button-subject-tab-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div><div className="grid gap-4 lg:grid-cols-[1.5fr_.75fr]"><section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7"><SectionHeading title={tab} action={<span className="text-xs text-[#8A958C]">4 items</span>} />{tab === 'Chapters' ? <div className="space-y-3">{chapters.map((chapter, index) => <div key={chapter} className="flex items-center gap-4 rounded-xl border border-[#EEE5D7] p-4"><span className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 1 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><div className="flex-1"><p className="text-sm font-bold text-[#244238]">{chapter}</p><p className="mt-1 text-xs text-[#8A958C]">{index === 1 ? 'Continue where you left off' : 'A short learning chapter'}</p></div><ChevronRight size={16} className="text-[#B3B7AF]" /></div>)}</div> : <div className="rounded-2xl bg-[#F8F3E9] p-8 text-center"><div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8E0D1] text-[#5A7F72]"><CircleHelp size={22} /></div><p className="text-sm font-bold text-[#244238]">{tab} will appear here</p><p className="mt-1 text-xs text-[#89938C]">Keep studying and this notebook will fill up.</p></div>}</section><aside className="h-fit rounded-2xl border border-[#E9DFCF] bg-[#F7F0E0] p-5 sm:p-6"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#B27745]">Little note</p><h3 className="display-serif mt-2 text-[23px] font-bold text-[#244238]">Progress is a practice.</h3><p className="mt-3 text-sm leading-6 text-[#6C766D]">Reviewing mistakes is not a setback. It is how Aanya's notebook gets stronger.</p><Link href="/practice" className="mt-5 inline-flex items-center gap-2 text-xs font-bold text-[#D28658]" data-testid="link-subject-practice">Practice this subject <ArrowRight size={14} /></Link></aside></div></div></Shell>;
+  const tabs = ['Chapters', 'Study Notes', 'Study Photos', 'Questions', 'Answers', 'Tests', 'Results', 'Mistakes'];
+  const content = getSubjectContent(subject);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const contentKey: Record<string, keyof typeof content> = {
+    Chapters: 'chapters',
+    'Study Notes': 'notes',
+    'Study Photos': 'photos',
+    Questions: 'questions',
+    Answers: 'answers',
+    Tests: 'tests',
+    Results: 'results',
+    Mistakes: 'mistakes',
+  };
+
+  const renderItemList = () => {
+    const items = content[contentKey[tab]] as { title: string; detail: string }[];
+    return <div className="space-y-3">
+      {items.map((item, index) => (
+        <button
+          type="button"
+          key={`${item.title}-${index}`}
+          onClick={() => setSelectedItem(item.title)}
+          className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`}
+          data-testid={`button-subject-item-${tab.toLowerCase().replaceAll(' ', '-')}-${index}`}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-[#244238]">{item.title}</span>
+            <span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span>
+          </span>
+          <ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" />
+        </button>
+      ))}
+    </div>;
+  };
+
+  return <Shell><div className="animate-rise-in">
+    <Link href="/" className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980] hover:text-[#244238] focus-ring" data-testid="link-back-home"><ArrowLeft size={15} /> Back to subjects</Link>
+    <div className="mb-7 flex flex-col justify-between gap-5 rounded-[24px] p-6 sm:flex-row sm:items-center sm:p-8" style={{ backgroundColor: subject.tint }}>
+      <div className="flex items-center gap-4"><span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/70 text-2xl font-bold" style={{ color: subject.color }}>{subject.icon}</span><div><p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em]" style={{ color: subject.color }}>Your notebook</p><h2 className="display-serif text-[32px] font-bold leading-none text-[#244238]">{subject.name}</h2><p className="mt-2 text-xs text-[#65746C]">Next up: {subject.next}</p></div></div>
+      <div className="w-full max-w-[170px]"><div className="mb-2 flex justify-between text-xs font-bold text-[#65746C]"><span>Progress</span><span>{subject.progress}%</span></div><ProgressBar value={subject.progress} color={subject.color} /></div>
+    </div>
+    <div className="mb-6 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <button type="button" key={item} onClick={() => { setTab(item); setSelectedItem(null); }} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${tab === item ? 'bg-[#244238] text-[#FFF9E9]' : 'border border-[#E5DCCF] bg-[#FFFDF7] text-[#718077] hover:border-[#B9CFC3]'}`} data-testid={`button-subject-tab-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div>
+    <div className="grid gap-4 lg:grid-cols-[1.5fr_.75fr]">
+      <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7">
+        <SectionHeading title={tab} action={<span className="text-xs text-[#8A958C]">{(content[contentKey[tab]] as unknown[]).length} sample items</span>} />
+        {renderItemList()}
+        {selectedItem && <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-xs font-bold text-[#42725A]" data-testid="status-subject-item-selected"><Check size={16} /> Opened “{selectedItem}” in this sample notebook.</div>}
+      </section>
+      <aside className="h-fit rounded-2xl border border-[#E9DFCF] bg-[#F7F0E0] p-5 sm:p-6"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#B27745]">Little note</p><h3 className="display-serif mt-2 text-[23px] font-bold text-[#244238]">Progress is a practice.</h3><p className="mt-3 text-sm leading-6 text-[#6C766D]">Reviewing mistakes is not a setback. It is how Aanya's notebook gets stronger.</p><Link href="/practice" className="mt-5 inline-flex items-center gap-2 text-xs font-bold text-[#D28658]" data-testid="link-subject-practice">Practice this subject <ArrowRight size={14} /></Link></aside>
+    </div>
+  </div></Shell>;
 }
 
 function PracticePage() {
