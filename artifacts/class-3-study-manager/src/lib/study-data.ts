@@ -20,6 +20,16 @@ export type SubjectContent = {
   mistakes: { title: string; detail: string }[];
 };
 
+export type ChapterContent = {
+  notes: { title: string; detail: string }[];
+  photos: { title: string; detail: string }[];
+  questions: { title: string; detail: string }[];
+  answers: { title: string; detail: string }[];
+  tests: { title: string; detail: string }[];
+  results: { title: string; detail: string }[];
+  mistakes: { title: string; detail: string }[];
+};
+
 export const subjects: Subject[] = [
   { id: 'english-first', name: 'English First', short: 'EN', color: '#5A7F72', tint: '#E3F0E9', icon: 'Aa', progress: 72, next: 'Nouns & Pronouns' },
   { id: 'english-second', name: 'English Second', short: 'EN', color: '#CC7A53', tint: '#FBE9DF', icon: 'Ab', progress: 58, next: 'Reading a Story' },
@@ -172,6 +182,58 @@ const subjectExamples: Record<string, SubjectContent> = {
 
 export function getSubjectContent(subject: Subject): SubjectContent {
   return subjectExamples[subject.id] ?? subjectExamples.math;
+}
+
+const chapterExamples: Record<string, ChapterContent> = {
+  multiplication: {
+    notes: [{ title: 'Equal groups', detail: 'Multiplication means adding equal groups. 4 × 3 means four groups of three.' }],
+    photos: [{ title: 'Times table practice page', detail: 'A sample page with 2, 3, 4, and 5 times tables · Added today' }],
+    questions: [{ title: 'Warm-up', detail: 'What is 4 × 6?' }, { title: 'Think in groups', detail: 'How many legs do 5 cats have altogether?' }],
+    answers: [{ title: 'What is 4 × 6?', detail: 'Answer: 24' }, { title: 'How many legs do 5 cats have?', detail: 'Answer: 20 legs' }],
+    tests: [{ title: 'Multiplication check', detail: '10 questions · Equal groups and tables up to 10' }],
+    results: [{ title: 'Multiplication check', detail: '8 / 10 · Review the 6 and 7 times tables' }],
+    mistakes: [{ title: 'Counting groups', detail: 'Count the number of groups first, then count how many are in each group.' }],
+  },
+  division: {
+    notes: [{ title: 'Sharing equally', detail: 'Division shares a number into equal groups. 12 ÷ 3 means 12 shared equally into 3 groups.' }],
+    photos: [{ title: 'Sharing equally worksheet', detail: 'A sample page with counters and division sums · Added yesterday' }],
+    questions: [{ title: 'Share the apples', detail: 'Share 12 apples equally between 3 children.' }, { title: 'Division fact', detail: 'What is 20 ÷ 5?' }],
+    answers: [{ title: 'Share 12 apples equally', detail: 'Answer: 4 apples for each child' }, { title: 'What is 20 ÷ 5?', detail: 'Answer: 4' }],
+    tests: [{ title: 'Division check', detail: '10 questions · Equal sharing and division facts' }],
+    results: [{ title: 'Division check', detail: '7 / 10 · Draw groups to check each answer' }],
+    mistakes: [{ title: 'Equal groups', detail: 'Every group must have the same number of objects.' }],
+  },
+  fractions: {
+    notes: [{ title: 'Parts of a whole', detail: 'A fraction shows equal parts of one whole. In 3/4, the 3 counts the parts and 4 names the total equal parts.' }],
+    photos: [{ title: 'Fraction shapes page', detail: 'A sample page with halves, thirds, and quarters · Added Monday' }],
+    questions: [{ title: 'Name the fraction', detail: 'A pizza has 4 equal slices and 1 slice is eaten. What fraction was eaten?' }, { title: 'Make a whole', detail: 'How many halves make one whole?' }],
+    answers: [{ title: 'What fraction was eaten?', detail: 'Answer: 1/4' }, { title: 'How many halves make one whole?', detail: 'Answer: 2 halves' }],
+    tests: [{ title: 'Fractions check', detail: '10 questions · Halves, thirds, quarters, and equal parts' }],
+    results: [{ title: 'Fractions check', detail: '9 / 10 · Excellent work with equal parts' }],
+    mistakes: [{ title: 'Equal parts', detail: 'The parts must be the same size for a fraction to be fair.' }],
+  },
+  shapes: {
+    notes: [{ title: 'Shape clues', detail: 'A triangle has 3 sides, a square has 4 equal sides, and a rectangle has 4 sides with opposite sides equal.' }],
+    photos: [{ title: 'Shape hunt page', detail: 'A sample page matching shapes to things at home · Added Friday' }],
+    questions: [{ title: 'Count the sides', detail: 'How many sides does a hexagon have?' }, { title: 'Find the shape', detail: 'Which shape has 4 equal sides?' }],
+    answers: [{ title: 'How many sides does a hexagon have?', detail: 'Answer: 6 sides' }, { title: 'Which shape has 4 equal sides?', detail: 'Answer: Square' }],
+    tests: [{ title: 'Shapes check', detail: '10 questions · Sides, corners, and common 2D shapes' }],
+    results: [{ title: 'Shapes check', detail: '8 / 10 · Review rectangles and squares' }],
+    mistakes: [{ title: 'Square and rectangle', detail: 'A square has four equal sides; a rectangle has two long and two short sides.' }],
+  },
+};
+
+export function getChapterContent(chapterTitle: string): ChapterContent {
+  const key = chapterTitle.toLowerCase();
+  return chapterExamples[key] ?? {
+    notes: [{ title: `${chapterTitle} notes`, detail: `A short Class 3 reminder for ${chapterTitle}. Read it once, then explain it in your own words.` }],
+    photos: [{ title: `${chapterTitle} notebook page`, detail: `A sample study photo for ${chapterTitle} · Added today` }],
+    questions: [{ title: 'Practice question', detail: `What is one important idea from ${chapterTitle}?` }],
+    answers: [{ title: 'Practice question', detail: `Answer: Review the main idea from ${chapterTitle}.` }],
+    tests: [{ title: `${chapterTitle} check`, detail: '5 questions · A quick chapter review' }],
+    results: [{ title: `${chapterTitle} check`, detail: '4 / 5 · Keep revising this chapter' }],
+    mistakes: [{ title: 'Review once more', detail: `Read the ${chapterTitle} notes again and try the practice question.` }],
+  };
 }
 
 export const practiceItems = [

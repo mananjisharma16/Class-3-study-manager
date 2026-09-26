@@ -23,7 +23,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { getSubjectContent, practiceItems, subjects, tests, type Subject } from '@/lib/study-data';
+import { getChapterContent, getSubjectContent, practiceItems, subjects, tests, type Subject } from '@/lib/study-data';
 
 const navItems = [
   { href: '/', label: 'Home', icon: HomeIcon },
@@ -102,6 +102,10 @@ function SectionHeading({ eyebrow, title, action }: { eyebrow?: string; title: s
 
 function ProgressBar({ value, color = '#5A7F72' }: { value: number; color?: string }) {
   return <div className="h-2 overflow-hidden rounded-full bg-[#EFE8DA]" aria-label={`${value}% complete`}><div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: color }} /></div>;
+}
+
+function slugifyLabel(value: string) {
+  return value.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
 function SubjectCard({ subject }: { subject: Subject }) {
@@ -189,11 +193,46 @@ function SubjectPage() {
     <div className="grid gap-4 lg:grid-cols-[1.5fr_.75fr]">
       <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7">
         <SectionHeading title={tab} action={<span className="text-xs text-[#8A958C]">{(content[contentKey[tab]] as unknown[]).length} sample items</span>} />
-        {renderItemList()}
+        {tab === 'Chapters' ? <div className="space-y-3">{content.chapters.map((chapter, index) => <Link key={chapter.title} href={`/subject/${subject.id}/chapter/${slugifyLabel(chapter.title)}`} className="flex w-full items-center gap-4 rounded-xl border border-[#EEE5D7] bg-[#FFFDF7] p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring" data-testid={`link-chapter-${slugifyLabel(chapter.title)}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{chapter.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{chapter.detail}</span></span><ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" /></Link>)}</div> : renderItemList()}
         {selectedItem && <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-xs font-bold text-[#42725A]" data-testid="status-subject-item-selected"><Check size={16} /> Opened “{selectedItem}” in this sample notebook.</div>}
       </section>
       <aside className="h-fit rounded-2xl border border-[#E9DFCF] bg-[#F7F0E0] p-5 sm:p-6"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#B27745]">Little note</p><h3 className="display-serif mt-2 text-[23px] font-bold text-[#244238]">Progress is a practice.</h3><p className="mt-3 text-sm leading-6 text-[#6C766D]">Reviewing mistakes is not a setback. It is how Aanya's notebook gets stronger.</p><Link href="/practice" className="mt-5 inline-flex items-center gap-2 text-xs font-bold text-[#D28658]" data-testid="link-subject-practice">Practice this subject <ArrowRight size={14} /></Link></aside>
     </div>
+  </div></Shell>;
+}
+
+function ChapterPage() {
+  const [, params] = useRoute('/subject/:subjectId/chapter/:chapterId');
+  const subject = subjects.find((item) => item.id === params?.subjectId) || subjects[0];
+  const subjectContent = getSubjectContent(subject);
+  const chapter = subjectContent.chapters.find((item) => slugifyLabel(item.title) === params?.chapterId) || subjectContent.chapters[0];
+  const chapterContent = getChapterContent(chapter.title);
+  const tabs = ['Study Notes', 'Study Photos', 'Questions', 'Answers', 'Test', 'Results', 'Mistakes'];
+  const contentKey: Record<string, keyof typeof chapterContent> = {
+    'Study Notes': 'notes',
+    'Study Photos': 'photos',
+    Questions: 'questions',
+    Answers: 'answers',
+    Test: 'tests',
+    Results: 'results',
+    Mistakes: 'mistakes',
+  };
+  const [tab, setTab] = useState('Study Notes');
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const items = chapterContent[contentKey[tab]];
+
+  return <Shell><div className="animate-rise-in">
+    <Link href={`/subject/${subject.id}`} className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980] hover:text-[#244238] focus-ring" data-testid="link-back-subject"><ArrowLeft size={15} /> Back to {subject.name}</Link>
+    <div className="mb-7 flex flex-col justify-between gap-5 rounded-[24px] p-6 sm:flex-row sm:items-center sm:p-8" style={{ backgroundColor: subject.tint }}>
+      <div className="flex items-center gap-4"><span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/70 text-2xl font-bold" style={{ color: subject.color }}>{subject.icon}</span><div><p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em]" style={{ color: subject.color }}>Chapter detail</p><h2 className="display-serif text-[32px] font-bold leading-none text-[#244238]">{chapter.title}</h2><p className="mt-2 text-xs text-[#65746C]">{subject.name} · Class 3</p></div></div>
+      <Link href={`/subject/${subject.id}`} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white/70 px-4 text-xs font-bold text-[#244238] transition hover:bg-white focus-ring" data-testid="link-all-subject-sections">All {subject.name} sections <ArrowRight size={14} /></Link>
+    </div>
+    <div className="mb-6 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <button type="button" key={item} onClick={() => { setTab(item); setSelectedItem(null); }} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${tab === item ? 'bg-[#244238] text-[#FFF9E9]' : 'border border-[#E5DCCF] bg-[#FFFDF7] text-[#718077] hover:border-[#B9CFC3]'}`} data-testid={`button-chapter-tab-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div>
+    <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7">
+      <SectionHeading title={tab} action={<span className="text-xs text-[#8A958C]">{items.length} sample items</span>} />
+      <div className="space-y-3">{items.map((item, index) => <button type="button" key={`${item.title}-${index}`} onClick={() => setSelectedItem(item.title)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-chapter-item-${tab.toLowerCase().replaceAll(' ', '-')}-${index}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span></span><ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" /></button>)}</div>
+      {selectedItem && <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-xs font-bold text-[#42725A]" data-testid="status-chapter-item-selected"><Check size={16} /> Opened “{selectedItem}” in this chapter.</div>}
+    </section>
   </div></Shell>;
 }
 
@@ -233,5 +272,5 @@ export function StudyApp() {
 }
 
 function SwitchRoutes() {
-  return <Switch><Route path="/" component={Home} /><Route path="/subject/:subjectId" component={SubjectPage} /><Route path="/practice" component={PracticePage} /><Route path="/create-test" component={CreateTestPage} /><Route path="/upload-photo" component={UploadPage} /><Route path="/test-results" component={ResultsPage} /><Route path="/progress" component={ProgressPage} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Home} /><Route path="/subject/:subjectId/chapter/:chapterId" component={ChapterPage} /><Route path="/subject/:subjectId" component={SubjectPage} /><Route path="/practice" component={PracticePage} /><Route path="/create-test" component={CreateTestPage} /><Route path="/upload-photo" component={UploadPage} /><Route path="/test-results" component={ResultsPage} /><Route path="/progress" component={ProgressPage} /><Route component={NotFound} /></Switch>;
 }
