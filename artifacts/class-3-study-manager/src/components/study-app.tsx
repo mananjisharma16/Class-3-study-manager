@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import NotFound from '@/pages/not-found';
 import {
@@ -19,12 +19,14 @@ import {
   Plus,
   Sparkles,
   Target,
+  Trash2,
   Trophy,
   Upload,
   X,
 } from 'lucide-react';
 import { getChapterContent, getSubjectContent, practiceItems, subjects, tests, type Subject } from '@/lib/study-data';
 import { multiplicationContent, type MultiplicationTestItem } from '@/lib/multiplication-data';
+import { deleteChapterPhoto, listChapterPhotos, saveChapterPhoto, type StoredStudyPhoto } from '@/lib/photo-storage';
 
 const navItems = [
   { href: '/', label: 'Home', icon: HomeIcon },
@@ -206,6 +208,102 @@ function SubjectPage() {
   </div></Shell>;
 }
 
+type ChapterPhotoPreview = StoredStudyPhoto & { previewUrl: string };
+
+function formatPhotoDate(timestamp: number) {
+  return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' }).format(timestamp);
+}
+
+function ChapterPhotoUploads({ chapterKey, openRequest }: { chapterKey: string; openRequest: number }) {
+  const [photos, setPhotos] = useState<ChapterPhotoPreview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(openRequest > 0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setError(null);
+    listChapterPhotos(chapterKey)
+      .then((records) => {
+        const previews = records.map((photo) => ({ ...photo, previewUrl: URL.createObjectURL(photo.blob) }));
+        if (active) {
+          setPhotos(previews);
+        } else {
+          previews.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+        }
+      })
+      .catch(() => {
+        if (active) setError('Photos could not be loaded from this device.');
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [chapterKey]);
+
+  useEffect(() => {
+    if (openRequest > 0) setIsOpen(true);
+  }, [openRequest]);
+
+  useEffect(() => () => {
+    photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+  }, [photos]);
+
+  const handleFiles = async (fileList: FileList | null) => {
+    const files = Array.from(fileList ?? []).filter((file) => file.type.startsWith('image/'));
+    if (files.length === 0) {
+      setError('Choose an image from the gallery or camera.');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setFeedback(null);
+    try {
+      for (const file of files) {
+        await saveChapterPhoto(chapterKey, file);
+      }
+      const records = await listChapterPhotos(chapterKey);
+      setPhotos(records.map((photo) => ({ ...photo, previewUrl: URL.createObjectURL(photo.blob) })));
+      setFeedback(`${files.length} photo${files.length === 1 ? '' : 's'} added to this chapter.`);
+      setIsOpen(false);
+    } catch {
+      setError('The photo could not be saved. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const removePhoto = async (photoId: string) => {
+    try {
+      await deleteChapterPhoto(photoId);
+      setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+      setFeedback('Photo deleted from this chapter.');
+    } catch {
+      setError('The photo could not be deleted. Please try again.');
+    }
+  };
+
+  return <section className="rounded-2xl border border-[#DCE8DE] bg-[#F3F8F1] p-4 sm:p-5" data-testid="chapter-photo-storage">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#5A7F72]">Your chapter photos</p><p className="mt-1 text-xs leading-5 text-[#718077]">Saved on this device for this subject and chapter only.</p></div>
+      <button type="button" onClick={() => setIsOpen((current) => !current)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#244238] px-4 text-xs font-bold text-[#FFF9E9] transition hover:bg-[#31584b] focus-ring" data-testid="button-open-chapter-photo-upload"><ImagePlus size={16} /> {isOpen ? 'Close upload' : 'Add Study Photo'}</button>
+    </div>
+    {isOpen && <div className="mt-4 rounded-xl border border-dashed border-[#B9CFC3] bg-white/60 p-3"><div className="grid gap-2 sm:grid-cols-2">
+      <label className={`flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#DCCFBD] bg-[#FFFDF7] px-3 text-xs font-bold text-[#244238] transition hover:border-[#5A7F72] ${isSaving ? 'pointer-events-none opacity-60' : ''}`}><Camera size={16} className="text-[#D28658]" /> Take a photo<input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => { void handleFiles(event.target.files); event.currentTarget.value = ''; }} disabled={isSaving} data-testid="input-chapter-photo-camera" /></label>
+      <label className={`flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#DCCFBD] bg-[#FFFDF7] px-3 text-xs font-bold text-[#244238] transition hover:border-[#5A7F72] ${isSaving ? 'pointer-events-none opacity-60' : ''}`}><ImagePlus size={16} className="text-[#5A7F72]" /> Choose from gallery<input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => { void handleFiles(event.target.files); event.currentTarget.value = ''; }} disabled={isSaving} data-testid="input-chapter-photo-gallery" /></label>
+    </div><p className="mt-3 text-center text-[11px] text-[#89938C]">{isSaving ? 'Saving your photo…' : 'You can add one or more clear photos.'}</p></div>}
+    {error && <p className="mt-3 rounded-lg bg-[#FBE9DF] px-3 py-2 text-xs font-bold text-[#A4624D]" role="alert" data-testid="status-chapter-photo-error">{error}</p>}
+    {feedback && !error && <p className="mt-3 rounded-lg bg-[#EAF5ED] px-3 py-2 text-xs font-bold text-[#42725A]" data-testid="status-chapter-photo">{feedback}</p>}
+    {isLoading ? <p className="mt-4 text-xs text-[#89938C]">Loading saved photos…</p> : photos.length > 0 ? <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">{photos.map((photo) => <article key={photo.id} className="overflow-hidden rounded-xl border border-[#DCE8DE] bg-[#FFFDF7]" data-testid={`chapter-uploaded-photo-${photo.id}`}><img src={photo.previewUrl} alt={photo.fileName} className="aspect-square w-full object-cover" /><div className="p-3"><p className="truncate text-xs font-bold text-[#244238]">{photo.fileName}</p><p className="mt-1 text-[10px] text-[#89938C]">Uploaded {formatPhotoDate(photo.createdAt)}</p><button type="button" onClick={() => { void removePhoto(photo.id); }} className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-1 rounded-lg border border-[#E5CFC4] text-[11px] font-bold text-[#A4624D] transition hover:bg-[#FBE9DF] focus-ring" data-testid={`button-delete-chapter-photo-${photo.id}`}><Trash2 size={13} /> Delete</button></div></article>)}</div> : <p className="mt-4 rounded-lg border border-dashed border-[#C9D9CF] px-3 py-3 text-center text-xs text-[#89938C]">No photos uploaded for this chapter yet.</p>}
+  </section>;
+}
+
 function ChapterPage() {
   const [, params] = useRoute('/subject/:subjectId/chapter/:chapterId');
   const subject = subjects.find((item) => item.id === params?.subjectId) || subjects[0];
@@ -213,6 +311,7 @@ function ChapterPage() {
   const chapter = subjectContent.chapters.find((item) => slugifyLabel(item.title) === params?.chapterId) || subjectContent.chapters[0];
   const chapterContent = getChapterContent(chapter.title);
   const isMultiplicationChapter = subject.id === 'math' && chapter.title === 'Multiplication';
+  const chapterKey = `${subject.id}/${slugifyLabel(chapter.title)}`;
   const tabs = ['Study Notes', 'Study Photos', 'Questions', 'Answers', 'Test', 'Results', 'Mistakes'];
   const contentKey: Record<string, keyof typeof chapterContent> = {
     'Study Notes': 'notes',
@@ -228,7 +327,14 @@ function ChapterPage() {
   const [questionAnswers, setQuestionAnswers] = useState<Record<number, string>>({});
   const [testAnswers, setTestAnswers] = useState<Record<number, string>>({});
   const [testResult, setTestResult] = useState<{ score: number; incorrect: MultiplicationTestItem[] } | null>(null);
+  const [photoUploadRequest, setPhotoUploadRequest] = useState(0);
   const items = chapterContent[contentKey[tab]];
+
+  const requestPhotoUpload = () => {
+    setTab('Study Photos');
+    setSelectedItem(null);
+    setPhotoUploadRequest((current) => current + 1);
+  };
 
   const chooseQuestionAnswer = (id: number, answer: string) => {
     setQuestionAnswers((current) => ({ ...current, [id]: answer }));
@@ -264,7 +370,7 @@ function ChapterPage() {
     }
 
     if (tab === 'Study Photos') {
-      return <div className="grid gap-3 sm:grid-cols-2">{multiplicationContent.worksheets.map((item, index) => <button type="button" key={item.title} onClick={() => setSelectedItem(item.title)} className={`rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-multiplication-worksheet-${index}`}><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span><span className="mt-4 block rounded-lg bg-[#F7F0E0] p-3 font-mono text-[11px] leading-5 text-[#6C766D]">{item.preview}</span><span className="mt-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.12em] text-[#D28658]">Open worksheet <ArrowRight size={12} /></span></button>)}</div>;
+      return <div><ChapterPhotoUploads chapterKey={chapterKey} openRequest={photoUploadRequest} /><div className="mt-5 grid gap-3 sm:grid-cols-2">{multiplicationContent.worksheets.map((item, index) => <button type="button" key={item.title} onClick={() => setSelectedItem(item.title)} className={`rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-multiplication-worksheet-${index}`}><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span><span className="mt-4 block rounded-lg bg-[#F7F0E0] p-3 font-mono text-[11px] leading-5 text-[#6C766D]">{item.preview}</span><span className="mt-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.12em] text-[#D28658]">Open worksheet <ArrowRight size={12} /></span></button>)}</div></div>;
     }
 
     if (tab === 'Questions') {
@@ -289,6 +395,8 @@ function ChapterPage() {
     return <div className="space-y-3">{testResult ? testResult.incorrect.length > 0 ? testResult.incorrect.map((item, index) => <button type="button" key={item.id} onClick={() => setSelectedItem(`Mistake ${item.id}`)} className={`w-full rounded-xl border p-4 text-left transition hover:border-[#B9CFC3] focus-ring ${selectedItem === `Mistake ${item.id}` ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-multiplication-mistake-${item.id}`}><div className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FBE9DF] text-xs font-bold text-[#A4624D]">{index + 1}</span><span><span className="block text-sm font-bold text-[#244238]">{item.question}</span><span className="mt-2 block text-xs text-[#A4624D]">Your answer: {testAnswers[item.id] || 'No answer'}</span><span className="mt-1 block text-sm font-bold text-[#5A7F72]">Correct answer: {item.answer}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.explanation}</span></span></div></button>) : <div className="rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-5 text-center text-sm font-bold text-[#42725A]">Wonderful work. There are no mistakes to review.</div> : multiplicationContent.mistakes.map((item, index) => renderSelectableCard(item.title, item.detail, index, `button-multiplication-common-mistake-${index}`))}</div>;
   };
 
+  const renderGenericItems = () => <div className="space-y-3">{items.map((item, index) => <button type="button" key={`${item.title}-${index}`} onClick={() => setSelectedItem(item.title)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-chapter-item-${tab.toLowerCase().replaceAll(' ', '-')}-${index}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span></span><ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" /></button>)}</div>;
+
   return <Shell><div className="animate-rise-in">
     <Link href={`/subject/${subject.id}`} className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980] hover:text-[#244238] focus-ring" data-testid="link-back-subject"><ArrowLeft size={15} /> Back to {subject.name}</Link>
     <div className="mb-7 flex flex-col justify-between gap-5 rounded-[24px] p-6 sm:flex-row sm:items-center sm:p-8" style={{ backgroundColor: subject.tint }}>
@@ -297,8 +405,8 @@ function ChapterPage() {
     </div>
     <div className="mb-6 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <button type="button" key={item} onClick={() => { setTab(item); setSelectedItem(null); }} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${tab === item ? 'bg-[#244238] text-[#FFF9E9]' : 'border border-[#E5DCCF] bg-[#FFFDF7] text-[#718077] hover:border-[#B9CFC3]'}`} data-testid={`button-chapter-tab-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div>
     <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7">
-      <SectionHeading title={tab} action={<span className="text-xs text-[#8A958C]">{isMultiplicationChapter ? tab === 'Questions' || tab === 'Test' ? 20 : tab === 'Study Notes' ? multiplicationContent.notes.length : tab === 'Study Photos' ? multiplicationContent.worksheets.length : tab === 'Answers' ? multiplicationContent.questions.length : tab === 'Mistakes' ? testResult ? testResult.incorrect.length : multiplicationContent.mistakes.length : 1 : items.length} {isMultiplicationChapter && tab === 'Mistakes' && testResult ? 'to review' : 'sample items'}</span>} />
-      {isMultiplicationChapter ? renderMultiplicationSection() : <div className="space-y-3">{items.map((item, index) => <button type="button" key={`${item.title}-${index}`} onClick={() => setSelectedItem(item.title)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-chapter-item-${tab.toLowerCase().replaceAll(' ', '-')}-${index}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span></span><ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" /></button>)}</div>}
+      <SectionHeading title={tab} action={<div className="flex flex-wrap items-center justify-end gap-2"><span className="text-xs text-[#8A958C]">{isMultiplicationChapter ? tab === 'Questions' || tab === 'Test' ? 20 : tab === 'Study Notes' ? multiplicationContent.notes.length : tab === 'Study Photos' ? multiplicationContent.worksheets.length : tab === 'Answers' ? multiplicationContent.questions.length : tab === 'Mistakes' ? testResult ? testResult.incorrect.length : multiplicationContent.mistakes.length : 1 : items.length} {isMultiplicationChapter && tab === 'Mistakes' && testResult ? 'to review' : 'sample items'}</span><button type="button" onClick={requestPhotoUpload} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#E8A35F] px-3 text-[11px] font-bold text-[#FFF9E9] transition hover:bg-[#D98255] focus-ring" data-testid="button-upload-photo"><ImagePlus size={14} /> Upload Photo</button></div>} />
+      {isMultiplicationChapter ? renderMultiplicationSection() : tab === 'Study Photos' ? <div><ChapterPhotoUploads chapterKey={chapterKey} openRequest={photoUploadRequest} /><div className="mt-5">{renderGenericItems()}</div></div> : renderGenericItems()}
       {selectedItem && !isMultiplicationChapter && <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-xs font-bold text-[#42725A]" data-testid="status-chapter-item-selected"><Check size={16} /> Opened “{selectedItem}” in this chapter.</div>}
     </section>
   </div></Shell>;
