@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { getChapterContent, getSubjectContent, practiceItems, subjects, tests, type Subject } from '@/lib/study-data';
+import { multiplicationContent, type MultiplicationTestItem } from '@/lib/multiplication-data';
 
 const navItems = [
   { href: '/', label: 'Home', icon: HomeIcon },
@@ -106,6 +107,10 @@ function ProgressBar({ value, color = '#5A7F72' }: { value: number; color?: stri
 
 function slugifyLabel(value: string) {
   return value.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function normalizeAnswer(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 function SubjectCard({ subject }: { subject: Subject }) {
@@ -207,6 +212,7 @@ function ChapterPage() {
   const subjectContent = getSubjectContent(subject);
   const chapter = subjectContent.chapters.find((item) => slugifyLabel(item.title) === params?.chapterId) || subjectContent.chapters[0];
   const chapterContent = getChapterContent(chapter.title);
+  const isMultiplicationChapter = subject.id === 'math' && chapter.title === 'Multiplication';
   const tabs = ['Study Notes', 'Study Photos', 'Questions', 'Answers', 'Test', 'Results', 'Mistakes'];
   const contentKey: Record<string, keyof typeof chapterContent> = {
     'Study Notes': 'notes',
@@ -219,7 +225,69 @@ function ChapterPage() {
   };
   const [tab, setTab] = useState('Study Notes');
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [questionAnswers, setQuestionAnswers] = useState<Record<number, string>>({});
+  const [testAnswers, setTestAnswers] = useState<Record<number, string>>({});
+  const [testResult, setTestResult] = useState<{ score: number; incorrect: MultiplicationTestItem[] } | null>(null);
   const items = chapterContent[contentKey[tab]];
+
+  const chooseQuestionAnswer = (id: number, answer: string) => {
+    setQuestionAnswers((current) => ({ ...current, [id]: answer }));
+    setSelectedItem(`Question ${id}`);
+  };
+
+  const chooseTestAnswer = (id: number, answer: string) => {
+    setTestAnswers((current) => ({ ...current, [id]: answer }));
+  };
+
+  const submitMultiplicationTest = () => {
+    const incorrect = multiplicationContent.test.filter((item) => {
+      const response = normalizeAnswer(testAnswers[item.id] ?? '');
+      const accepted = [item.answer, ...(item.acceptedAnswers ?? [])].map(normalizeAnswer);
+      return !accepted.includes(response);
+    });
+    setTestResult({ score: multiplicationContent.test.length - incorrect.length, incorrect });
+    setTab('Results');
+    setSelectedItem(null);
+  };
+
+  const renderSelectableCard = (title: string, detail: string, index: number, testId: string) => (
+    <button type="button" key={`${title}-${index}`} onClick={() => setSelectedItem(title)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={testId}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E0F0F4] text-xs font-bold text-[#3E7891]">{String(index + 1).padStart(2, '0')}</span>
+      <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{detail}</span></span>
+      <ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" />
+    </button>
+  );
+
+  const renderMultiplicationSection = () => {
+    if (tab === 'Study Notes') {
+      return <div className="space-y-3">{multiplicationContent.notes.map((item, index) => renderSelectableCard(item.title, item.detail, index, `button-multiplication-note-${index}`))}</div>;
+    }
+
+    if (tab === 'Study Photos') {
+      return <div className="grid gap-3 sm:grid-cols-2">{multiplicationContent.worksheets.map((item, index) => <button type="button" key={item.title} onClick={() => setSelectedItem(item.title)} className={`rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-multiplication-worksheet-${index}`}><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span><span className="mt-4 block rounded-lg bg-[#F7F0E0] p-3 font-mono text-[11px] leading-5 text-[#6C766D]">{item.preview}</span><span className="mt-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.12em] text-[#D28658]">Open worksheet <ArrowRight size={12} /></span></button>)}</div>;
+    }
+
+    if (tab === 'Questions') {
+      return <div className="space-y-4">{multiplicationContent.questions.map((item) => <article key={item.id} className="rounded-2xl border border-[#EEE5D7] bg-[#FFFDF7] p-4 sm:p-5" data-testid={`multiplication-question-${item.id}`}><div className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E0F0F4] text-xs font-bold text-[#3E7891]">{item.id}</span><h3 className="text-sm font-bold leading-5 text-[#244238]">{item.question}</h3></div><div className="mt-4 grid grid-cols-4 gap-2">{item.options.map((option, optionIndex) => { const letter = String.fromCharCode(65 + optionIndex); const selected = questionAnswers[item.id] === option; return <button type="button" key={option} onClick={() => chooseQuestionAnswer(item.id, option)} className={`min-h-11 min-w-0 rounded-lg border px-1 text-[11px] font-bold transition sm:px-2 sm:text-xs ${selected ? 'border-[#5A7F72] bg-[#E3F0E9] text-[#244238]' : 'border-[#E3D8C8] bg-[#FFFDF7] text-[#718077] hover:border-[#8EB59E]'}`} data-testid={`button-multiplication-question-${item.id}-${letter}`}>{letter}. {option}</button>; })}</div><div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-[#DCCFBD] bg-[#FAF6ED] px-3 py-2 text-xs"><span className="font-bold text-[#B27745]">Answer Box</span><span className="text-[#718077]">{questionAnswers[item.id] ? `${String.fromCharCode(65 + item.options.indexOf(questionAnswers[item.id] as never))}. ${questionAnswers[item.id]}` : 'Choose an option above'}</span></div></article>)}</div>;
+    }
+
+    if (tab === 'Answers') {
+      return <div className="space-y-3">{multiplicationContent.questions.map((item, index) => <button type="button" key={item.id} onClick={() => setSelectedItem(`Answer ${item.id}`)} className={`w-full rounded-xl border p-4 text-left transition hover:border-[#B9CFC3] focus-ring ${selectedItem === `Answer ${item.id}` ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-multiplication-answer-${item.id}`}><div className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EAF5ED] text-xs font-bold text-[#42725A]">{item.id}</span><span><span className="block text-sm font-bold text-[#244238]">{item.question}</span><span className="mt-2 block text-sm font-bold text-[#5A7F72]">Correct answer: {item.answer}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.explanation}</span></span></div></button>)}</div>;
+    }
+
+    if (tab === 'Test') {
+      return <div><div className="mb-5 rounded-xl bg-[#F7F0E0] p-4 text-xs leading-5 text-[#6C766D]">20 questions · 1 mark each · Includes MCQs, fill in the blanks, and word problems. Complete as many as you can, then submit to see your result.</div><div className="space-y-4">{multiplicationContent.test.map((item) => <article key={item.id} className="rounded-2xl border border-[#EEE5D7] bg-[#FFFDF7] p-4 sm:p-5" data-testid={`multiplication-test-question-${item.id}`}><div className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E0F0F4] text-xs font-bold text-[#3E7891]">{item.id}</span><div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#B27745]">{item.kind === 'mcq' ? 'MCQ' : item.kind === 'fill' ? 'Fill in the blank' : 'Word problem'}</p><h3 className="mt-1 text-sm font-bold leading-5 text-[#244238]">{item.question}</h3></div></div>{item.kind === 'mcq' && item.options ? <div className="mt-4 grid grid-cols-4 gap-2">{item.options.map((option, optionIndex) => { const letter = String.fromCharCode(65 + optionIndex); const selected = testAnswers[item.id] === option; return <button type="button" key={option} onClick={() => chooseTestAnswer(item.id, option)} className={`min-h-11 min-w-0 rounded-lg border px-1 text-[11px] font-bold transition sm:px-2 sm:text-xs ${selected ? 'border-[#5A7F72] bg-[#E3F0E9] text-[#244238]' : 'border-[#E3D8C8] text-[#718077] hover:border-[#8EB59E]'}`} data-testid={`button-multiplication-test-${item.id}-${letter}`}>{letter}. {option}</button>; })}</div> : <input value={testAnswers[item.id] ?? ''} onChange={(event) => chooseTestAnswer(item.id, event.target.value)} placeholder="Type your answer" className="mt-4 min-h-11 w-full rounded-lg border border-[#E3D8C8] bg-[#FFFDF7] px-3 text-sm text-[#244238] outline-none focus:border-[#5A7F72]" data-testid={`input-multiplication-test-${item.id}`} />}</article>)}</div><button type="button" onClick={submitMultiplicationTest} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#244238] text-sm font-bold text-[#FFF9E9] transition hover:bg-[#31584b] focus-ring" data-testid="button-submit-multiplication-test"><Check size={17} /> Submit 20-question test</button></div>;
+    }
+
+    if (tab === 'Results') {
+      const score = testResult?.score ?? 0;
+      const incorrectCount = testResult?.incorrect.length ?? 0;
+      const percentage = testResult ? Math.round((score / multiplicationContent.test.length) * 100) : 0;
+      return <div className="space-y-4">{testResult ? <><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><Stat label="Score" value={`${score}`} note="marks earned" color="#E3F0E9" /><Stat label="Total marks" value={`${multiplicationContent.test.length}`} note="one mark each" color="#E0F0F4" /><Stat label="Percentage" value={`${percentage}%`} note="chapter test" color="#FFF2D9" /><Stat label="Correct / wrong" value={`${score} / ${incorrectCount}`} note="answers" color="#FBE9DF" /></div><div className="rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-sm font-bold text-[#42725A]">Your result is ready. Open Mistakes to review every incorrect answer with an explanation.</div><button type="button" onClick={() => { setTestAnswers({}); setTestResult(null); setTab('Test'); setSelectedItem(null); }} className="min-h-11 rounded-xl border border-[#DCCFBD] px-4 text-xs font-bold text-[#718077] transition hover:border-[#5A7F72] hover:text-[#244238]" data-testid="button-retake-multiplication-test">Retake test</button></> : <><div className="rounded-xl bg-[#F7F0E0] p-5"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#B27745]">Ready when you are</p><p className="mt-2 text-sm leading-6 text-[#6C766D]">Submit the 20-question test to see score, total marks, percentage, and correct/incorrect count here.</p></div>{renderSelectableCard(multiplicationContent.previousResult.title, multiplicationContent.previousResult.detail, 0, 'button-multiplication-previous-result')}</>}</div>;
+    }
+
+    return <div className="space-y-3">{testResult ? testResult.incorrect.length > 0 ? testResult.incorrect.map((item, index) => <button type="button" key={item.id} onClick={() => setSelectedItem(`Mistake ${item.id}`)} className={`w-full rounded-xl border p-4 text-left transition hover:border-[#B9CFC3] focus-ring ${selectedItem === `Mistake ${item.id}` ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-multiplication-mistake-${item.id}`}><div className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FBE9DF] text-xs font-bold text-[#A4624D]">{index + 1}</span><span><span className="block text-sm font-bold text-[#244238]">{item.question}</span><span className="mt-2 block text-xs text-[#A4624D]">Your answer: {testAnswers[item.id] || 'No answer'}</span><span className="mt-1 block text-sm font-bold text-[#5A7F72]">Correct answer: {item.answer}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.explanation}</span></span></div></button>) : <div className="rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-5 text-center text-sm font-bold text-[#42725A]">Wonderful work. There are no mistakes to review.</div> : multiplicationContent.mistakes.map((item, index) => renderSelectableCard(item.title, item.detail, index, `button-multiplication-common-mistake-${index}`))}</div>;
+  };
 
   return <Shell><div className="animate-rise-in">
     <Link href={`/subject/${subject.id}`} className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980] hover:text-[#244238] focus-ring" data-testid="link-back-subject"><ArrowLeft size={15} /> Back to {subject.name}</Link>
@@ -229,9 +297,9 @@ function ChapterPage() {
     </div>
     <div className="mb-6 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <button type="button" key={item} onClick={() => { setTab(item); setSelectedItem(null); }} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${tab === item ? 'bg-[#244238] text-[#FFF9E9]' : 'border border-[#E5DCCF] bg-[#FFFDF7] text-[#718077] hover:border-[#B9CFC3]'}`} data-testid={`button-chapter-tab-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div>
     <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7">
-      <SectionHeading title={tab} action={<span className="text-xs text-[#8A958C]">{items.length} sample items</span>} />
-      <div className="space-y-3">{items.map((item, index) => <button type="button" key={`${item.title}-${index}`} onClick={() => setSelectedItem(item.title)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-chapter-item-${tab.toLowerCase().replaceAll(' ', '-')}-${index}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span></span><ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" /></button>)}</div>
-      {selectedItem && <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-xs font-bold text-[#42725A]" data-testid="status-chapter-item-selected"><Check size={16} /> Opened “{selectedItem}” in this chapter.</div>}
+      <SectionHeading title={tab} action={<span className="text-xs text-[#8A958C]">{isMultiplicationChapter ? tab === 'Questions' || tab === 'Test' ? 20 : tab === 'Study Notes' ? multiplicationContent.notes.length : tab === 'Study Photos' ? multiplicationContent.worksheets.length : tab === 'Answers' ? multiplicationContent.questions.length : tab === 'Mistakes' ? testResult ? testResult.incorrect.length : multiplicationContent.mistakes.length : 1 : items.length} {isMultiplicationChapter && tab === 'Mistakes' && testResult ? 'to review' : 'sample items'}</span>} />
+      {isMultiplicationChapter ? renderMultiplicationSection() : <div className="space-y-3">{items.map((item, index) => <button type="button" key={`${item.title}-${index}`} onClick={() => setSelectedItem(item.title)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-chapter-item-${tab.toLowerCase().replaceAll(' ', '-')}-${index}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span></span><ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" /></button>)}</div>}
+      {selectedItem && !isMultiplicationChapter && <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-xs font-bold text-[#42725A]" data-testid="status-chapter-item-selected"><Check size={16} /> Opened “{selectedItem}” in this chapter.</div>}
     </section>
   </div></Shell>;
 }
