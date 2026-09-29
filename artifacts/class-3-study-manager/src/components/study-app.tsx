@@ -419,7 +419,318 @@ function PracticePage() {
   return <Shell><div className="mx-auto max-w-[850px] animate-rise-in"><div className="mb-8 flex items-end justify-between"><div><p className="mb-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#D28658]">A little every day</p><h2 className="display-serif text-[34px] font-bold tracking-[-.04em] text-[#244238]">Daily Practice</h2><p className="mt-2 text-sm text-[#89938C]">Three friendly questions for a brighter brain.</p></div><span className="rounded-full bg-[#F7E9CC] px-3 py-2 text-xs font-bold text-[#816C42]">{done.length} / {practiceItems.length} done</span></div><div className="mb-7 flex gap-2">{practiceItems.map((_, index) => <div key={index} className={`h-1.5 flex-1 rounded-full ${done.includes(index) ? 'bg-[#5A7F72]' : index === current ? 'bg-[#E8A35F]' : 'bg-[#E6DDCE]'}`} />)}</div><section className="overflow-hidden rounded-[25px] border border-[#E9DFCF] bg-[#FFFDF7] shadow-sm"><div className="p-6 sm:p-10" style={{ backgroundColor: item.color }}><div className="mb-10 flex items-center justify-between"><span className="rounded-full bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em]" style={{ color: item.accent }}>{item.subject}</span><span className="text-xs font-bold" style={{ color: item.accent }}>Question {current + 1}</span></div><h3 className="display-serif max-w-[650px] text-[31px] font-bold leading-tight text-[#244238] sm:text-[42px]">{item.question}</h3><div className="mt-10 rounded-2xl border border-white/70 bg-white/50 p-4 text-sm text-[#65746C]">Think quietly, then check your answer when you are ready.</div></div><div className="p-6 sm:p-8">{showAnswer ? <div className="rounded-2xl border border-[#CFE1D5] bg-[#EAF5ED] p-5"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#5A7F72]">Answer</p><p className="mt-2 display-serif text-2xl font-bold text-[#244238]">{item.answer}</p></div> : <button onClick={() => setShowAnswer(true)} className="w-full rounded-xl border-2 border-dashed border-[#DCCFBD] p-5 text-sm font-bold text-[#7C8980] transition hover:border-[#5A7F72] hover:text-[#244238]" data-testid="button-show-answer">Show answer</button>}<div className="mt-6 flex justify-end">{showAnswer && <button onClick={markDone} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#244238] px-5 text-sm font-bold text-[#FFF9E9] transition hover:bg-[#31584b]" data-testid="button-next-practice">{current === practiceItems.length - 1 ? 'Finish practice' : 'Next question'} <ArrowRight size={16} /></button>}</div></div></section></div></Shell>;
 }
 
+type GenericTestQuestion = {
+  question: string;
+  options: string[];
+  answer: string;
+};
+
+const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
+  'English First': [
+    { question: 'Find the noun: The little bird sings.', options: ['bird', 'sings', 'little', 'the'], answer: 'bird' },
+    { question: 'Choose the pronoun: Ravi is happy because ___ won the game.', options: ['he', 'she', 'it', 'they'], answer: 'he' },
+    { question: 'Which word is an action word?', options: ['run', 'school', 'blue', 'pencil'], answer: 'run' },
+    { question: 'Which word names a person?', options: ['teacher', 'quickly', 'happy', 'jump'], answer: 'teacher' },
+    { question: 'Which word describes a flower?', options: ['beautiful', 'flower', 'garden', 'grow'], answer: 'beautiful' },
+  ],
+  'English Second': [
+    { question: 'What does tiny mean?', options: ['Very small', 'Very big', 'Very loud', 'Very fast'], answer: 'Very small' },
+    { question: 'A good story has a beginning, middle and ___?', options: ['end', 'number', 'colour', 'shape'], answer: 'end' },
+    { question: 'Which mark ends a statement?', options: ['Full stop', 'Comma', 'Question mark', 'Colon'], answer: 'Full stop' },
+    { question: 'Who is a character in a story?', options: ['A person or animal in the story', 'A punctuation mark', 'A number', 'A colour'], answer: 'A person or animal in the story' },
+    { question: 'What helps us understand a new word in a story?', options: ['Context', 'Clock', 'Shape', 'Number'], answer: 'Context' },
+  ],
+  'Hindi First': [
+    { question: '“राम बाजार जाता है।” इसमें संज्ञा शब्द कौन-सा है?', options: ['राम', 'जाता', 'है', 'और'], answer: 'राम' },
+    { question: '“सीमा ___ लड़की है।” सही शब्द चुनिए।', options: ['एक', 'दो', 'हम', 'वे'], answer: 'एक' },
+    { question: '“वह स्कूल जाता है।” में सर्वनाम कौन-सा है?', options: ['वह', 'स्कूल', 'जाता', 'है'], answer: 'वह' },
+    { question: 'एक से अधिक वस्तुओं को क्या कहते हैं?', options: ['बहुवचन', 'एकवचन', 'संज्ञा', 'वाक्य'], answer: 'बहुवचन' },
+    { question: '“किताब” किसका उदाहरण है?', options: ['संज्ञा', 'सर्वनाम', 'क्रिया', 'विशेषण'], answer: 'संज्ञा' },
+  ],
+  'Hindi Second': [
+    { question: 'क__ताब में कौन-सी मात्रा आएगी?', options: ['ि', 'ा', 'ी', 'ु'], answer: 'ि' },
+    { question: '२१ के बाद कौन-सी संख्या आती है?', options: ['२२', '२०', '२३', '१९'], answer: '२२' },
+    { question: '“नीला” में कौन-सी मात्रा है?', options: ['ी', 'ा', 'ि', 'ु'], answer: 'ा' },
+    { question: '१ से १० तक गिनती में ५ के बाद क्या आता है?', options: ['६', '७', '४', '८'], answer: '६' },
+    { question: 'चित्र देखकर वाक्य बनाना क्या कहलाता है?', options: ['चित्र वर्णन', 'गिनती', 'मात्रा', 'संज्ञा'], answer: 'चित्र वर्णन' },
+  ],
+  'Math': [
+    { question: 'What is 3 × 8?', options: ['24', '21', '18', '28'], answer: '24' },
+    { question: 'How many quarters make one whole?', options: ['4', '2', '3', '5'], answer: '4' },
+    { question: 'What is 20 ÷ 5?', options: ['4', '5', '10', '15'], answer: '4' },
+    { question: 'How many sides does a hexagon have?', options: ['6', '5', '7', '8'], answer: '6' },
+    { question: 'What is half of 10?', options: ['5', '2', '10', '8'], answer: '5' },
+  ],
+  'Math Second': [
+    { question: 'What time is half past 4?', options: ['4:30', '4:15', '5:00', '3:30'], answer: '4:30' },
+    { question: 'How many ₹5 coins make ₹25?', options: ['5', '4', '6', '10'], answer: '5' },
+    { question: 'Which hand shows minutes on a clock?', options: ['Long hand', 'Short hand', 'Both', 'Neither'], answer: 'Long hand' },
+    { question: 'How many ₹10 coins make ₹50?', options: ['5', '4', '6', '10'], answer: '5' },
+    { question: 'Which is longer?', options: ['1 metre', '1 centimetre', '1 millimetre', 'None'], answer: '1 metre' },
+  ],
+  'EVS': [
+    { question: 'Name one source of clean water.', options: ['River', 'Chair', 'Book', 'Pencil'], answer: 'River' },
+    { question: 'Which part of a plant takes in water from soil?', options: ['Roots', 'Flower', 'Fruit', 'Leaf'], answer: 'Roots' },
+    { question: 'Which part supports a plant?', options: ['Stem', 'Root', 'Seed', 'Flower'], answer: 'Stem' },
+    { question: 'Which is a source of water?', options: ['Lake', 'Table', 'Bag', 'Door'], answer: 'Lake' },
+    { question: 'Why should we save water?', options: ['Water is important for life', 'Water is a toy', 'Water is a book', 'Water is a colour'], answer: 'Water is important for life' },
+  ],
+  'GK': [
+    { question: 'What is the national animal of India?', options: ['Bengal tiger', 'Lion', 'Elephant', 'Horse'], answer: 'Bengal tiger' },
+    { question: 'What is the capital of India?', options: ['New Delhi', 'Mumbai', 'Kolkata', 'Jaipur'], answer: 'New Delhi' },
+    { question: 'Which planet do we live on?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], answer: 'Earth' },
+    { question: 'Which animal is known for having a long trunk?', options: ['Elephant', 'Tiger', 'Rabbit', 'Horse'], answer: 'Elephant' },
+    { question: 'What shines in the sky at night?', options: ['Moon', 'Tree', 'River', 'Road'], answer: 'Moon' },
+  ],
+  'Computer': [
+    { question: 'Which device helps us type letters?', options: ['Keyboard', 'Mouse', 'Monitor', 'Speaker'], answer: 'Keyboard' },
+    { question: 'Which device helps us point and click?', options: ['Mouse', 'Keyboard', 'Monitor', 'CPU'], answer: 'Mouse' },
+    { question: 'Which part shows information?', options: ['Monitor', 'Keyboard', 'Mouse', 'CPU'], answer: 'Monitor' },
+    { question: 'Which part does the main computer work?', options: ['CPU', 'Mouse', 'Keyboard', 'Monitor'], answer: 'CPU' },
+    { question: 'Why should we take screen breaks?', options: ['To rest our eyes and body', 'To play more', 'To make the screen bigger', 'To turn the keyboard off'], answer: 'To rest our eyes and body' },
+  ],
+};
+
 function CreateTestPage() {
+  const [, navigate] = useLocation();
+  const [subject, setSubject] = useState('Math');
+  const [count, setCount] = useState('5');
+  const [note, setNote] = useState('');
+
+  const createTest = () => {
+    navigate(`/take-test/${encodeURIComponent(subject)}/${count}`);
+  };
+
+  const available = genericTestQuestions[subject]?.length ?? 0;
+
+  return (
+    <Shell>
+      <div className="mx-auto max-w-[900px] animate-rise-in">
+        <SectionHeading eyebrow="Make revision feel simple" title="Create a Test" />
+
+        <div className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
+          <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-6 sm:p-8">
+            <div className="space-y-6">
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-[#244238]">
+                  Choose a subject
+                </span>
+                <select
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="min-h-12 w-full rounded-xl border border-[#E3D8C8] bg-[#FFFDF7] px-4 text-sm text-[#244238]"
+                  data-testid="select-test-subject"
+                >
+                  {subjects.map((item) => (
+                    <option key={item.id}>{item.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-[#244238]">
+                  Number of questions
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {['5', '10', '15'].map((value) => (
+                    <button
+                      type="button"
+                      key={value}
+                      onClick={() => setCount(value)}
+                      disabled={Number(value) > available}
+                      className={`min-h-12 rounded-xl border text-sm font-bold ${
+                        count === value
+                          ? 'border-[#5A7F72] bg-[#E3F0E9] text-[#244238]'
+                          : 'border-[#E3D8C8] text-[#839089]'
+                      } ${Number(value) > available ? 'cursor-not-allowed opacity-40' : ''}`}
+                    >
+                      {value} questions
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-[#89938C]">
+                  This version has {available} questions available for {subject}.
+                </p>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-[#244238]">
+                  Test note <span className="font-normal text-[#A1A9A1]">(optional)</span>
+                </span>
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="e.g. Revision before Friday"
+                  className="min-h-12 w-full rounded-xl border border-[#E3D8C8] bg-[#FFFDF7] px-4 text-sm outline-none"
+                  data-testid="input-test-note"
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={createTest}
+              disabled={!available}
+              className="mt-8 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#244238] text-sm font-bold text-[#FFF9E9]"
+              data-testid="button-create-test"
+            >
+              <Plus size={17} /> Start {subject} test
+            </button>
+          </section>
+
+          <aside className="paper-grid h-fit rounded-2xl border border-[#E4D9C6] bg-[#F7F0E0] p-6">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F5C95B] text-[#244238]">
+              <FileText size={20} />
+            </div>
+            <h3 className="display-serif mt-5 text-[25px] font-bold text-[#244238]">
+              A kind test is a helpful test.
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-[#6C766D]">
+              Choose a subject, start the test, answer the questions, and submit to see your score.
+            </p>
+          </aside>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function GenericTestPage() {
+  const [, params] = useRoute('/take-test/:subject/:count');
+  const subject = decodeURIComponent(params?.subject ?? 'Math');
+  const count = Math.min(Number(params?.count ?? 5), 5);
+  const questions = genericTestQuestions[subject] ?? [];
+
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const score = questions
+    .slice(0, count)
+    .filter((question, index) => answers[index] === question.answer)
+    .length;
+
+  if (!questions.length) {
+    return (
+      <Shell>
+        <p className="text-sm font-bold text-[#244238]">No test questions found.</p>
+      </Shell>
+    );
+  }
+
+  if (submitted) {
+    const wrong = count - score;
+    const percentage = Math.round((score / count) * 100);
+
+    return (
+      <Shell>
+        <div className="mx-auto max-w-[900px] animate-rise-in">
+          <SectionHeading eyebrow={subject} title="Test Result" />
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Score" value={`${score}`} note="correct" color="#E3F0E9" />
+            <Stat label="Total" value={`${count}`} note="questions" color="#E0F0F4" />
+            <Stat label="Percentage" value={`${percentage}%`} note="result" color="#FFF2D9" />
+            <Stat label="Wrong" value={`${wrong}`} note="answers" color="#FBE9DF" />
+          </div>
+
+          <div className="mt-5 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-5 text-sm font-bold text-[#42725A]">
+            Test complete! You can review the answers below.
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {questions.slice(0, count).map((question, index) => (
+              <div key={index} className="rounded-xl border border-[#EEE5D7] bg-[#FFFDF7] p-4">
+                <p className="text-sm font-bold text-[#244238]">
+                  {index + 1}. {question.question}
+                </p>
+                <p className="mt-2 text-xs text-[#A4624D]">
+                  Your answer: {answers[index] || 'Not answered'}
+                </p>
+                <p className="mt-1 text-xs font-bold text-[#5A7F72]">
+                  Correct answer: {question.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAnswers({});
+              setSubmitted(false);
+            }}
+            className="mt-5 min-h-11 rounded-xl border border-[#DCCFBD] px-5 text-xs font-bold text-[#718077]"
+          >
+            Retake test
+          </button>
+        </div>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell>
+      <div className="mx-auto max-w-[900px] animate-rise-in">
+        <Link
+          href="/create-test"
+          className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980]"
+        >
+          <ArrowLeft size={15} /> Back to Create Test
+        </Link>
+
+        <SectionHeading eyebrow={subject} title={`${count}-Question Test`} />
+
+        <div className="space-y-4">
+          {questions.slice(0, count).map((question, index) => (
+            <article
+              key={index}
+              className="rounded-2xl border border-[#EEE5D7] bg-[#FFFDF7] p-5"
+            >
+              <div className="flex items-start gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E0F0F4] text-xs font-bold text-[#3E7891]">
+                  {index + 1}
+                </span>
+                <h3 className="text-sm font-bold leading-5 text-[#244238]">
+                  {question.question}
+                </h3>
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {question.options.map((option) => (
+                  <button
+                    type="button"
+                    key={option}
+                    onClick={() =>
+                      setAnswers((current) => ({
+                        ...current,
+                        [index]: option,
+                      }))
+                    }
+                    className={`min-h-11 rounded-lg border px-3 text-left text-xs font-bold ${
+                      answers[index] === option
+                        ? 'border-[#5A7F72] bg-[#E3F0E9] text-[#244238]'
+                        : 'border-[#E3D8C8] text-[#718077]'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSubmitted(true)}
+          className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#244238] text-sm font-bold text-[#FFF9E9]"
+        >
+          <Check size={17} /> Submit Test
+        </button>
+      </div>
+    </Shell>
+  );
+}
   const [created, setCreated] = useState(false);
   const [subject, setSubject] = useState('Math');
   const [count, setCount] = useState('10');
