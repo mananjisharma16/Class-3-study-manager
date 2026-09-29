@@ -106,15 +106,6 @@ function SectionHeading({ eyebrow, title, action }: { eyebrow?: string; title: s
 function ProgressBar({ value, color = '#5A7F72' }: { value: number; color?: string }) {
   return <div className="h-2 overflow-hidden rounded-full bg-[#EFE8DA]" aria-label={`${value}% complete`}><div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: color }} /></div>;
 }
-
-function slugifyLabel(value: string) {
-  return value.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-function normalizeAnswer(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
 function SubjectCard({ subject }: { subject: Subject }) {
   return <Link href={`/subject/${subject.id}`} className="group rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-4 shadow-[0_3px_12px_rgba(78,62,40,.04)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(78,62,40,.11)] focus-ring" data-testid={`card-subject-${subject.id}`}>
     <div className="mb-4 flex items-start justify-between"><span className="flex h-11 w-11 items-center justify-center rounded-xl text-lg font-bold" style={{ backgroundColor: subject.tint, color: subject.color }}>{subject.icon}</span><ChevronRight size={17} className="text-[#B3B7AF] transition group-hover:translate-x-1 group-hover:text-[#244238]" /></div>
@@ -411,7 +402,14 @@ function ChapterPage() {
     </section>
   </div></Shell>;
 }
-
+function slugifyLabel(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/&/g, 'and')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/(^-|-$)/g, '');
+}
 function PracticePage() {
   const [current, setCurrent] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
