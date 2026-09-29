@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
-
+const rawPort = process.env.PORT || '5173';
 const rawPort = process.env.PORT;
 
 if (!rawPort) {
@@ -19,14 +19,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    'BASE_PATH environment variable is required but was not provided.',
-  );
-}
-
+const basePath = process.env.BASE_PATH || '/Class-3-study-manager/';
 export default defineConfig({
   base: basePath,
   plugins: [
