@@ -318,6 +318,7 @@ function ChapterPage() {
   const [questionAnswers, setQuestionAnswers] = useState<Record<number, string>>({});
   const [testAnswers, setTestAnswers] = useState<Record<number, string>>({});
   const [testResult, setTestResult] = useState<{ score: number; incorrect: MultiplicationTestItem[] } | null>(null);
+  const [genericChapterResult, setGenericChapterResult] = useState<{ score: number; incorrect: GenericTestQuestion[] } | null>(null);
   const [photoUploadRequest, setPhotoUploadRequest] = useState(0);
   const items = chapterContent[contentKey[tab]];
 
@@ -386,6 +387,105 @@ function ChapterPage() {
     return <div className="space-y-3">{testResult ? testResult.incorrect.length > 0 ? testResult.incorrect.map((item, index) => <button type="button" key={item.id} onClick={() => setSelectedItem(`Mistake ${item.id}`)} className={`w-full rounded-xl border p-4 text-left transition hover:border-[#B9CFC3] focus-ring ${selectedItem === `Mistake ${item.id}` ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-multiplication-mistake-${item.id}`}><div className="flex items-start gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FBE9DF] text-xs font-bold text-[#A4624D]">{index + 1}</span><span><span className="block text-sm font-bold text-[#244238]">{item.question}</span><span className="mt-2 block text-xs text-[#A4624D]">Your answer: {testAnswers[item.id] || 'No answer'}</span><span className="mt-1 block text-sm font-bold text-[#5A7F72]">Correct answer: {item.answer}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.explanation}</span></span></div></button>) : <div className="rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-5 text-center text-sm font-bold text-[#42725A]">Wonderful work. There are no mistakes to review.</div> : multiplicationContent.mistakes.map((item, index) => renderSelectableCard(item.title, item.detail, index, `button-multiplication-common-mistake-${index}`))}</div>;
   };
 
+  const renderGenericChapterTest = () => {
+    const chapterQuestions = (genericTestQuestions[subject.name] ?? []).slice(0, 20);
+
+    if (tab === 'Test') {
+      return (
+        <div>
+          <div className="mb-5 rounded-xl bg-[#F7F0E0] p-4 text-xs leading-5 text-[#6C766D]">
+            20 questions · 1 mark each · Choose the best answer for this subject test.
+          </div>
+          <div className="space-y-4">
+            {chapterQuestions.map((item, index) => (
+              <article key={index} className="rounded-2xl border border-[#EEE5D7] bg-[#FFFDF7] p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E0F0F4] text-xs font-bold text-[#3E7891]">{index + 1}</span>
+                  <h3 className="text-sm font-bold leading-5 text-[#244238]">{item.question}</h3>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {item.options.map((option, optionIndex) => {
+                    const letter = String.fromCharCode(65 + optionIndex);
+                    const selected = testAnswers[index] === option;
+                    return (
+                      <button
+                        type="button"
+                        key={option}
+                        onClick={() => chooseTestAnswer(index, option)}
+                        className={`min-h-11 rounded-lg border px-3 text-left text-xs font-bold transition ${selected ? 'border-[#5A7F72] bg-[#E3F0E9] text-[#244238]' : 'border-[#E3D8C8] bg-[#FFFDF7] text-[#718077] hover:border-[#8EB59E]'}`}
+                      >
+                        {letter}. {option}
+                      </button>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const incorrect = chapterQuestions.filter((item, index) => testAnswers[index] !== item.answer);
+              setGenericChapterResult({ score: chapterQuestions.length - incorrect.length, incorrect });
+              setTab('Results');
+              setSelectedItem(null);
+            }}
+            className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#244238] text-sm font-bold text-[#FFF9E9]"
+          >
+            <Check size={17} /> Submit 20-question test
+          </button>
+        </div>
+      );
+    }
+
+    if (tab === 'Results') {
+      const score = genericChapterResult?.score ?? 0;
+      const wrong = genericChapterResult?.incorrect.length ?? 0;
+      const percentage = genericChapterResult ? Math.round((score / chapterQuestions.length) * 100) : 0;
+      return genericChapterResult ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Score" value={`${score}`} note="correct" color="#E3F0E9" />
+            <Stat label="Total" value={`${chapterQuestions.length}`} note="questions" color="#E0F0F4" />
+            <Stat label="Percentage" value={`${percentage}%`} note="result" color="#FFF2D9" />
+            <Stat label="Wrong" value={`${wrong}`} note="answers" color="#FBE9DF" />
+          </div>
+          <div className="rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-sm font-bold text-[#42725A]">
+            Test complete! Open Mistakes to review the questions you missed.
+          </div>
+          <button
+            type="button"
+            onClick={() => { setTestAnswers({}); setGenericChapterResult(null); setTab('Test'); setSelectedItem(null); }}
+            className="min-h-11 rounded-xl border border-[#DCCFBD] px-4 text-xs font-bold text-[#718077]"
+          >
+            Retake test
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-[#F7F0E0] p-5 text-sm leading-6 text-[#6C766D]">
+          Complete the 20-question test to see your score here.
+        </div>
+      );
+    }
+
+    const mistakes = genericChapterResult?.incorrect ?? [];
+    return mistakes.length > 0 ? (
+      <div className="space-y-3">
+        {mistakes.map((item, index) => (
+          <div key={index} className="rounded-xl border border-[#E9D0C7] bg-[#FBE9DF] p-4">
+            <p className="text-sm font-bold text-[#244238]">{index + 1}. {item.question}</p>
+            <p className="mt-2 text-xs text-[#A4624D]">Your answer: {testAnswers[chapterQuestions.indexOf(item)] || 'Not answered'}</p>
+            <p className="mt-1 text-xs font-bold text-[#5A7F72]">Correct answer: {item.answer}</p>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-5 text-center text-sm font-bold text-[#42725A]">
+        {genericChapterResult ? 'Wonderful work. There are no mistakes to review.' : 'Complete the test to see mistakes here.'}
+      </div>
+    );
+  };
+
   const renderGenericItems = () => <div className="space-y-3">{items.map((item, index) => <button type="button" key={`${item.title}-${index}`} onClick={() => setSelectedItem(item.title)} className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-[#B9CFC3] hover:shadow-sm focus-ring ${selectedItem === item.title ? 'border-[#8EB59E] bg-[#F3F8F1]' : 'border-[#EEE5D7] bg-[#FFFDF7]'}`} data-testid={`button-chapter-item-${tab.toLowerCase().replaceAll(' ', '-')}-${index}`}><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold" style={{ backgroundColor: index === 0 ? subject.tint : '#F6F0E5', color: subject.color }}>{String(index + 1).padStart(2, '0')}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#244238]">{item.title}</span><span className="mt-1 block text-xs leading-5 text-[#8A958C]">{item.detail}</span></span><ChevronRight size={16} className="shrink-0 text-[#B3B7AF]" /></button>)}</div>;
 
   return <Shell><div className="animate-rise-in">
@@ -396,8 +496,8 @@ function ChapterPage() {
     </div>
     <div className="mb-6 flex gap-2 overflow-x-auto pb-1">{tabs.map((item) => <button type="button" key={item} onClick={() => { setTab(item); setSelectedItem(null); }} className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition ${tab === item ? 'bg-[#244238] text-[#FFF9E9]' : 'border border-[#E5DCCF] bg-[#FFFDF7] text-[#718077] hover:border-[#B9CFC3]'}`} data-testid={`button-chapter-tab-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div>
     <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7">
-      <SectionHeading title={tab} action={<div className="flex flex-wrap items-center justify-end gap-2"><span className="hidden text-xs text-[#8A958C] sm:inline">{isMultiplicationChapter ? tab === 'Questions' || tab === 'Test' ? 20 : tab === 'Study Notes' ? multiplicationContent.notes.length : tab === 'Study Photos' ? multiplicationContent.worksheets.length : tab === 'Answers' ? multiplicationContent.questions.length : tab === 'Mistakes' ? testResult ? testResult.incorrect.length : multiplicationContent.mistakes.length : 1 : items.length} {isMultiplicationChapter && tab === 'Mistakes' && testResult ? 'to review' : 'sample items'}</span><button type="button" onClick={requestPhotoUpload} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#E8A35F] px-3 text-[11px] font-bold text-[#FFF9E9] transition hover:bg-[#D98255] focus-ring" data-testid="button-upload-photo"><ImagePlus size={14} /> Upload Photo</button></div>} />
-      {isMultiplicationChapter ? renderMultiplicationSection() : tab === 'Study Photos' ? <div><ChapterPhotoUploads chapterKey={chapterKey} openRequest={photoUploadRequest} /><div className="mt-5">{renderGenericItems()}</div></div> : renderGenericItems()}
+      <SectionHeading title={tab} action={<div className="flex flex-wrap items-center justify-end gap-2"><span className="hidden text-xs text-[#8A958C] sm:inline">{isMultiplicationChapter ? tab === 'Questions' || tab === 'Test' ? 20 : tab === 'Study Notes' ? multiplicationContent.notes.length : tab === 'Study Photos' ? multiplicationContent.worksheets.length : tab === 'Answers' ? multiplicationContent.questions.length : tab === 'Mistakes' ? testResult ? testResult.incorrect.length : multiplicationContent.mistakes.length : 1 : tab === 'Test' ? 20 : tab === 'Results' ? genericChapterResult ? 1 : 0 : tab === 'Mistakes' ? genericChapterResult ? genericChapterResult.incorrect.length : 0 : items.length} {isMultiplicationChapter && tab === 'Mistakes' && testResult ? 'to review' : 'sample items'}</span><button type="button" onClick={requestPhotoUpload} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#E8A35F] px-3 text-[11px] font-bold text-[#FFF9E9] transition hover:bg-[#D98255] focus-ring" data-testid="button-upload-photo"><ImagePlus size={14} /> Upload Photo</button></div>} />
+      {isMultiplicationChapter ? renderMultiplicationSection() : tab === 'Test' || tab === 'Results' || tab === 'Mistakes' ? renderGenericChapterTest() : tab === 'Study Photos' ? <div><ChapterPhotoUploads chapterKey={chapterKey} openRequest={photoUploadRequest} /><div className="mt-5">{renderGenericItems()}</div></div> : renderGenericItems()}
       {selectedItem && !isMultiplicationChapter && <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-4 text-xs font-bold text-[#42725A]" data-testid="status-chapter-item-selected"><Check size={16} /> Opened “{selectedItem}” in this chapter.</div>}
     </section>
   </div></Shell>;
@@ -432,6 +532,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: 'Which word is an action word?', options: ['run', 'school', 'blue', 'pencil'], answer: 'run' },
     { question: 'Which word names a person?', options: ['teacher', 'quickly', 'happy', 'jump'], answer: 'teacher' },
     { question: 'Which word describes a flower?', options: ['beautiful', 'flower', 'garden', 'grow'], answer: 'beautiful' },
+    { question: 'Which is a naming word?', options: ['school', 'quickly', 'run', 'happy'], answer: 'school' },
+    { question: 'Choose the pronoun: ___ are going to the park.', options: ['They', 'Book', 'Run', 'Blue'], answer: 'They' },
+    { question: 'Which word is a verb?', options: ['jump', 'ball', 'green', 'teacher'], answer: 'jump' },
+    { question: 'Which word tells us more about a noun?', options: ['small', 'run', 'school', 'and'], answer: 'small' },
+    { question: 'Choose the noun: The cat drinks milk.', options: ['cat', 'drinks', 'quickly', 'and'], answer: 'cat' },
+    { question: 'Which word is a pronoun?', options: ['she', 'table', 'sing', 'yellow'], answer: 'she' },
+    { question: 'Which word shows an action?', options: ['write', 'pencil', 'book', 'red'], answer: 'write' },
+    { question: 'Which is a describing word?', options: ['bright', 'jump', 'school', 'they'], answer: 'bright' },
+    { question: 'Choose the noun: The dog runs fast.', options: ['dog', 'runs', 'fast', 'the'], answer: 'dog' },
+    { question: 'Choose the pronoun: Meena is kind. ___ helps everyone.', options: ['She', 'He', 'It', 'They'], answer: 'She' },
+    { question: 'Which word is an action?', options: ['dance', 'garden', 'pretty', 'pencil'], answer: 'dance' },
+    { question: 'Which word describes a house?', options: ['big', 'house', 'live', 'door'], answer: 'big' },
+    { question: 'Which is a naming word?', options: ['teacher', 'slowly', 'jump', 'happy'], answer: 'teacher' },
+    { question: 'Which word can replace Rohan in a sentence?', options: ['he', 'it', 'they', 'we'], answer: 'he' },
+    { question: 'Find the verb: Birds fly in the sky.', options: ['fly', 'birds', 'sky', 'the'], answer: 'fly' },
   ],
   'English Second': [
     { question: 'What does tiny mean?', options: ['Very small', 'Very big', 'Very loud', 'Very fast'], answer: 'Very small' },
@@ -439,6 +554,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: 'Which mark ends a statement?', options: ['Full stop', 'Comma', 'Question mark', 'Colon'], answer: 'Full stop' },
     { question: 'Who is a character in a story?', options: ['A person or animal in the story', 'A punctuation mark', 'A number', 'A colour'], answer: 'A person or animal in the story' },
     { question: 'What helps us understand a new word in a story?', options: ['Context', 'Clock', 'Shape', 'Number'], answer: 'Context' },
+    { question: 'Which mark is used to ask a question?', options: ['Question mark', 'Full stop', 'Comma', 'Hyphen'], answer: 'Question mark' },
+    { question: 'Which word is the opposite of hot?', options: ['cold', 'warm', 'bright', 'fast'], answer: 'cold' },
+    { question: 'Choose the correct plural of child.', options: ['children', 'childs', 'childes', 'child'], answer: 'children' },
+    { question: 'Which word means the same as happy?', options: ['glad', 'sad', 'angry', 'slow'], answer: 'glad' },
+    { question: 'Which word is a describing word?', options: ['soft', 'run', 'book', 'they'], answer: 'soft' },
+    { question: 'What should a sentence begin with?', options: ['A capital letter', 'A comma', 'A small number', 'A full stop'], answer: 'A capital letter' },
+    { question: 'Which mark separates items in a list?', options: ['Comma', 'Question mark', 'Full stop', 'Apostrophe'], answer: 'Comma' },
+    { question: 'Choose the correct word: The boys ___ playing.', options: ['are', 'is', 'am', 'be'], answer: 'are' },
+    { question: 'What is the opposite of early?', options: ['late', 'quick', 'near', 'small'], answer: 'late' },
+    { question: 'Which word means very large?', options: ['huge', 'tiny', 'short', 'thin'], answer: 'huge' },
+    { question: 'Choose the correct spelling.', options: ['because', 'becaus', 'becose', 'beacuse'], answer: 'because' },
+    { question: 'Which sentence is a question?', options: ['Where are you?', 'I am here.', 'Please sit down.', 'The sun is bright.'], answer: 'Where are you?' },
+    { question: 'Which word is a noun?', options: ['garden', 'quickly', 'jump', 'blue'], answer: 'garden' },
+    { question: 'Choose the correct word: She ___ a book.', options: ['has', 'have', 'having', 'are'], answer: 'has' },
+    { question: 'Which word is an action word?', options: ['read', 'story', 'green', 'teacher'], answer: 'read' },
   ],
   'Hindi First': [
     { question: '“राम बाजार जाता है।” इसमें संज्ञा शब्द कौन-सा है?', options: ['राम', 'जाता', 'है', 'और'], answer: 'राम' },
@@ -446,6 +576,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: '“वह स्कूल जाता है।” में सर्वनाम कौन-सा है?', options: ['वह', 'स्कूल', 'जाता', 'है'], answer: 'वह' },
     { question: 'एक से अधिक वस्तुओं को क्या कहते हैं?', options: ['बहुवचन', 'एकवचन', 'संज्ञा', 'वाक्य'], answer: 'बहुवचन' },
     { question: '“किताब” किसका उदाहरण है?', options: ['संज्ञा', 'सर्वनाम', 'क्रिया', 'विशेषण'], answer: 'संज्ञा' },
+    { question: '“सीता खेलती है।” में क्रिया कौन-सी है?', options: ['खेलती', 'सीता', 'है', 'में'], answer: 'खेलती' },
+    { question: '“मैं स्कूल जाता हूँ।” में सर्वनाम कौन-सा है?', options: ['मैं', 'स्कूल', 'जाता', 'हूँ'], answer: 'मैं' },
+    { question: 'एक वस्तु के लिए कौन-सा शब्द है?', options: ['एकवचन', 'बहुवचन', 'क्रिया', 'विशेषण'], answer: 'एकवचन' },
+    { question: '“सुंदर फूल” में विशेषण कौन-सा है?', options: ['सुंदर', 'फूल', 'में', 'और'], answer: 'सुंदर' },
+    { question: '“मोहन दौड़ता है।” में संज्ञा कौन-सी है?', options: ['मोहन', 'दौड़ता', 'है', 'और'], answer: 'मोहन' },
+    { question: '“वे खेल रहे हैं।” में सर्वनाम कौन-सा है?', options: ['वे', 'खेल', 'रहे', 'हैं'], answer: 'वे' },
+    { question: '“गाय घास खाती है।” में क्रिया कौन-सी है?', options: ['खाती', 'गाय', 'घास', 'है'], answer: 'खाती' },
+    { question: '“लाल गेंद” में विशेषण कौन-सा है?', options: ['लाल', 'गेंद', 'में', 'और'], answer: 'लाल' },
+    { question: '“बच्चे” किस वचन का उदाहरण है?', options: ['बहुवचन', 'एकवचन', 'क्रिया', 'विशेषण'], answer: 'बहुवचन' },
+    { question: '“पेड़” किसका उदाहरण है?', options: ['संज्ञा', 'सर्वनाम', 'क्रिया', 'विशेषण'], answer: 'संज्ञा' },
+    { question: '“तुम अच्छे हो।” में सर्वनाम कौन-सा है?', options: ['तुम', 'अच्छे', 'हो', 'और'], answer: 'तुम' },
+    { question: '“मीठा आम” में विशेषण कौन-सा है?', options: ['मीठा', 'आम', 'में', 'वह'], answer: 'मीठा' },
+    { question: '“राम पढ़ता है।” में क्रिया कौन-सी है?', options: ['पढ़ता', 'राम', 'है', 'और'], answer: 'पढ़ता' },
+    { question: '“लड़का” किसका उदाहरण है?', options: ['संज्ञा', 'क्रिया', 'सर्वनाम', 'विशेषण'], answer: 'संज्ञा' },
+    { question: '“हम घर जाते हैं।” में सर्वनाम कौन-सा है?', options: ['हम', 'घर', 'जाते', 'हैं'], answer: 'हम' },
   ],
   'Hindi Second': [
     { question: 'क__ताब में कौन-सी मात्रा आएगी?', options: ['ि', 'ा', 'ी', 'ु'], answer: 'ि' },
@@ -453,6 +598,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: '“नीला” में कौन-सी मात्रा है?', options: ['ी', 'ा', 'ि', 'ु'], answer: 'ा' },
     { question: '१ से १० तक गिनती में ५ के बाद क्या आता है?', options: ['६', '७', '४', '८'], answer: '६' },
     { question: 'चित्र देखकर वाक्य बनाना क्या कहलाता है?', options: ['चित्र वर्णन', 'गिनती', 'मात्रा', 'संज्ञा'], answer: 'चित्र वर्णन' },
+    { question: '“किताब” शब्द में कौन-सी मात्रा है?', options: ['ि', 'ा', 'ी', 'ु'], answer: 'ि' },
+    { question: '३० के बाद कौन-सी संख्या आती है?', options: ['३१', '२९', '३२', '३०'], answer: '३१' },
+    { question: '“फूल” में कौन-सी मात्रा है?', options: ['ू', 'ु', 'ी', 'ा'], answer: 'ू' },
+    { question: '१० के पहले कौन-सी संख्या आती है?', options: ['९', '८', '११', '१२'], answer: '९' },
+    { question: '“सीता” में कौन-सी मात्रा है?', options: ['ी', 'ि', 'ु', 'ू'], answer: 'ी' },
+    { question: '१५ के बाद कौन-सी संख्या आती है?', options: ['१६', '१४', '१७', '१८'], answer: '१६' },
+    { question: '“कुर्सी” में कौन-सी मात्रा है?', options: ['ु', 'ू', 'ी', 'ा'], answer: 'ु' },
+    { question: '२५ से पहले कौन-सी संख्या आती है?', options: ['२४', '२३', '२६', '२७'], answer: '२४' },
+    { question: '“दूध” में कौन-सी मात्रा है?', options: ['ू', 'ु', 'ी', 'ा'], answer: 'ू' },
+    { question: '४० के बाद कौन-सी संख्या आती है?', options: ['४१', '३९', '४२', '४५'], answer: '४१' },
+    { question: '“नीम” में कौन-सी मात्रा है?', options: ['ी', 'ि', 'ु', 'ू'], answer: 'ी' },
+    { question: '७ के बाद कौन-सी संख्या आती है?', options: ['८', '६', '९', '१०'], answer: '८' },
+    { question: '“गुलाब” में कौन-सी मात्रा है?', options: ['ु', 'ू', 'ि', 'ी'], answer: 'ु' },
+    { question: '५० से पहले कौन-सी संख्या आती है?', options: ['४९', '४८', '५१', '५२'], answer: '४९' },
+    { question: '“कुर्सी” शब्द में अंतिम मात्रा कौन-सी है?', options: ['ी', 'ु', 'ा', 'ि'], answer: 'ी' },
   ],
   'Math': [
     { question: 'What is 3 × 8?', options: ['24', '21', '18', '28'], answer: '24' },
@@ -460,6 +620,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: 'What is 20 ÷ 5?', options: ['4', '5', '10', '15'], answer: '4' },
     { question: 'How many sides does a hexagon have?', options: ['6', '5', '7', '8'], answer: '6' },
     { question: 'What is half of 10?', options: ['5', '2', '10', '8'], answer: '5' },
+    { question: 'What is 6 × 4?', options: ['24', '20', '18', '28'], answer: '24' },
+    { question: 'What is 30 ÷ 6?', options: ['5', '6', '4', '3'], answer: '5' },
+    { question: 'What is 7 + 8?', options: ['15', '14', '16', '17'], answer: '15' },
+    { question: 'What is 18 - 9?', options: ['9', '8', '10', '7'], answer: '9' },
+    { question: 'How many sides does a square have?', options: ['4', '3', '5', '6'], answer: '4' },
+    { question: 'What is one half of 20?', options: ['10', '5', '15', '20'], answer: '10' },
+    { question: 'What is 5 × 5?', options: ['25', '20', '30', '15'], answer: '25' },
+    { question: 'What is 36 ÷ 4?', options: ['9', '8', '10', '12'], answer: '9' },
+    { question: 'Which number is greatest?', options: ['19', '12', '9', '15'], answer: '19' },
+    { question: 'What is 10 + 25?', options: ['35', '30', '45', '25'], answer: '35' },
+    { question: 'What is 40 - 17?', options: ['23', '27', '33', '21'], answer: '23' },
+    { question: 'How many corners does a triangle have?', options: ['3', '4', '2', '5'], answer: '3' },
+    { question: 'What is 9 × 2?', options: ['18', '16', '20', '12'], answer: '18' },
+    { question: 'What is 24 ÷ 3?', options: ['8', '6', '9', '7'], answer: '8' },
+    { question: 'Which fraction means one whole?', options: ['4/4', '1/4', '2/4', '3/4'], answer: '4/4' },
   ],
   'Math Second': [
     { question: 'What time is half past 4?', options: ['4:30', '4:15', '5:00', '3:30'], answer: '4:30' },
@@ -467,6 +642,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: 'Which hand shows minutes on a clock?', options: ['Long hand', 'Short hand', 'Both', 'Neither'], answer: 'Long hand' },
     { question: 'How many ₹10 coins make ₹50?', options: ['5', '4', '6', '10'], answer: '5' },
     { question: 'Which is longer?', options: ['1 metre', '1 centimetre', '1 millimetre', 'None'], answer: '1 metre' },
+    { question: 'How many minutes are in one hour?', options: ['60', '30', '100', '24'], answer: '60' },
+    { question: 'What time is quarter past 3?', options: ['3:15', '3:30', '4:15', '2:45'], answer: '3:15' },
+    { question: 'How many ₹2 coins make ₹10?', options: ['5', '4', '6', '2'], answer: '5' },
+    { question: 'Which is shorter?', options: ['1 centimetre', '1 metre', '1 kilometre', '10 metres'], answer: '1 centimetre' },
+    { question: 'How many days are in one week?', options: ['7', '5', '6', '8'], answer: '7' },
+    { question: 'How many paise make one rupee?', options: ['100', '10', '50', '20'], answer: '100' },
+    { question: 'What time is 6 o’clock?', options: ['6:00', '6:30', '5:30', '7:00'], answer: '6:00' },
+    { question: 'Which unit is used to measure a pencil?', options: ['centimetre', 'kilometre', 'litre', 'kilogram'], answer: 'centimetre' },
+    { question: 'How many months are in one year?', options: ['12', '10', '11', '13'], answer: '12' },
+    { question: 'How many ₹20 notes make ₹100?', options: ['5', '4', '6', '10'], answer: '5' },
+    { question: 'What comes after Monday?', options: ['Tuesday', 'Sunday', 'Friday', 'Saturday'], answer: 'Tuesday' },
+    { question: 'Which is heavier?', options: ['1 kilogram', '1 gram', '1 milligram', 'None'], answer: '1 kilogram' },
+    { question: 'How many hours are in a day?', options: ['24', '12', '10', '60'], answer: '24' },
+    { question: 'What time is quarter to 5?', options: ['4:45', '5:15', '4:15', '5:45'], answer: '4:45' },
+    { question: 'How many ₹5 coins make ₹50?', options: ['10', '5', '8', '20'], answer: '10' },
   ],
   'EVS': [
     { question: 'Name one source of clean water.', options: ['River', 'Chair', 'Book', 'Pencil'], answer: 'River' },
@@ -474,6 +664,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: 'Which part supports a plant?', options: ['Stem', 'Root', 'Seed', 'Flower'], answer: 'Stem' },
     { question: 'Which is a source of water?', options: ['Lake', 'Table', 'Bag', 'Door'], answer: 'Lake' },
     { question: 'Why should we save water?', options: ['Water is important for life', 'Water is a toy', 'Water is a book', 'Water is a colour'], answer: 'Water is important for life' },
+    { question: 'Which part of a plant makes food?', options: ['Leaves', 'Roots', 'Stem', 'Flower'], answer: 'Leaves' },
+    { question: 'Which animal gives us milk?', options: ['Cow', 'Tiger', 'Lion', 'Crow'], answer: 'Cow' },
+    { question: 'Which sense organ helps us see?', options: ['Eyes', 'Ears', 'Nose', 'Tongue'], answer: 'Eyes' },
+    { question: 'Which sense organ helps us hear?', options: ['Ears', 'Eyes', 'Nose', 'Skin'], answer: 'Ears' },
+    { question: 'What do plants need to grow?', options: ['Water and sunlight', 'Only stones', 'Only toys', 'Only paper'], answer: 'Water and sunlight' },
+    { question: 'Which is a healthy food?', options: ['Fruit', 'Candy', 'Chips', 'Soda'], answer: 'Fruit' },
+    { question: 'Why do we wash our hands?', options: ['To remove germs', 'To make them heavy', 'To change their colour', 'To make noise'], answer: 'To remove germs' },
+    { question: 'Which animal is a pet?', options: ['Dog', 'Tiger', 'Lion', 'Elephant'], answer: 'Dog' },
+    { question: 'Where do fish live?', options: ['Water', 'Trees', 'Desert', 'Sky'], answer: 'Water' },
+    { question: 'Which body part helps us smell?', options: ['Nose', 'Eyes', 'Ears', 'Hands'], answer: 'Nose' },
+    { question: 'Which season is usually very hot?', options: ['Summer', 'Winter', 'Rainy', 'Autumn'], answer: 'Summer' },
+    { question: 'What do we breathe in?', options: ['Air', 'Water', 'Sand', 'Milk'], answer: 'Air' },
+    { question: 'Which is a means of transport?', options: ['Bus', 'Table', 'Chair', 'Book'], answer: 'Bus' },
+    { question: 'Which animal can fly?', options: ['Bird', 'Cow', 'Dog', 'Fish'], answer: 'Bird' },
+    { question: 'What should we do with waste paper?', options: ['Put it in a bin', 'Throw it in a river', 'Leave it on the road', 'Burn it indoors'], answer: 'Put it in a bin' },
   ],
   'GK': [
     { question: 'What is the national animal of India?', options: ['Bengal tiger', 'Lion', 'Elephant', 'Horse'], answer: 'Bengal tiger' },
@@ -481,6 +686,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: 'Which planet do we live on?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], answer: 'Earth' },
     { question: 'Which animal is known for having a long trunk?', options: ['Elephant', 'Tiger', 'Rabbit', 'Horse'], answer: 'Elephant' },
     { question: 'What shines in the sky at night?', options: ['Moon', 'Tree', 'River', 'Road'], answer: 'Moon' },
+    { question: 'How many days are in a week?', options: ['7', '5', '6', '8'], answer: '7' },
+    { question: 'Which is the largest land animal?', options: ['Elephant', 'Cat', 'Dog', 'Rabbit'], answer: 'Elephant' },
+    { question: 'Which colour is at the top of the Indian flag?', options: ['Saffron', 'Green', 'Blue', 'White'], answer: 'Saffron' },
+    { question: 'How many legs does a spider have?', options: ['8', '6', '4', '10'], answer: '8' },
+    { question: 'Which is a bird?', options: ['Parrot', 'Tiger', 'Cow', 'Dog'], answer: 'Parrot' },
+    { question: 'Which shape has three sides?', options: ['Triangle', 'Square', 'Circle', 'Rectangle'], answer: 'Triangle' },
+    { question: 'How many months are in a year?', options: ['12', '10', '11', '13'], answer: '12' },
+    { question: 'Which star is closest to Earth?', options: ['Sun', 'Moon', 'Mars', 'Jupiter'], answer: 'Sun' },
+    { question: 'Which animal is called the king of the jungle?', options: ['Lion', 'Horse', 'Goat', 'Rabbit'], answer: 'Lion' },
+    { question: 'Which festival is known as the festival of lights?', options: ['Diwali', 'Holi', 'Eid', 'Onam'], answer: 'Diwali' },
+    { question: 'Which is a fruit?', options: ['Mango', 'Carrot', 'Potato', 'Spinach'], answer: 'Mango' },
+    { question: 'Which day comes after Friday?', options: ['Saturday', 'Thursday', 'Monday', 'Sunday'], answer: 'Saturday' },
+    { question: 'How many fingers are on one hand?', options: ['5', '4', '6', '10'], answer: '5' },
+    { question: 'Which is the largest ocean?', options: ['Pacific Ocean', 'Indian Ocean', 'Arctic Ocean', 'Atlantic Ocean'], answer: 'Pacific Ocean' },
+    { question: 'Which instrument tells time?', options: ['Clock', 'Spoon', 'Pencil', 'Bag'], answer: 'Clock' },
   ],
   'Computer': [
     { question: 'Which device helps us type letters?', options: ['Keyboard', 'Mouse', 'Monitor', 'Speaker'], answer: 'Keyboard' },
@@ -488,6 +708,21 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
     { question: 'Which part shows information?', options: ['Monitor', 'Keyboard', 'Mouse', 'CPU'], answer: 'Monitor' },
     { question: 'Which part does the main computer work?', options: ['CPU', 'Mouse', 'Keyboard', 'Monitor'], answer: 'CPU' },
     { question: 'Why should we take screen breaks?', options: ['To rest our eyes and body', 'To play more', 'To make the screen bigger', 'To turn the keyboard off'], answer: 'To rest our eyes and body' },
+    { question: 'Which device prints words on paper?', options: ['Printer', 'Mouse', 'Keyboard', 'Monitor'], answer: 'Printer' },
+    { question: 'Which device lets us hear sound?', options: ['Speaker', 'Keyboard', 'Mouse', 'Printer'], answer: 'Speaker' },
+    { question: 'Which key creates a space between words?', options: ['Spacebar', 'Enter', 'Shift', 'Backspace'], answer: 'Spacebar' },
+    { question: 'Which key removes a letter before the cursor?', options: ['Backspace', 'Spacebar', 'Enter', 'Shift'], answer: 'Backspace' },
+    { question: 'What do we use to move the pointer?', options: ['Mouse', 'Printer', 'Speaker', 'Monitor'], answer: 'Mouse' },
+    { question: 'Which device shows pictures and text?', options: ['Monitor', 'Keyboard', 'Mouse', 'CPU'], answer: 'Monitor' },
+    { question: 'Which part is often called the brain of the computer?', options: ['CPU', 'Mouse', 'Speaker', 'Printer'], answer: 'CPU' },
+    { question: 'Which device can store files?', options: ['Hard drive', 'Speaker', 'Mouse', 'Monitor'], answer: 'Hard drive' },
+    { question: 'Which key moves the cursor to a new line?', options: ['Enter', 'Spacebar', 'Shift', 'Caps Lock'], answer: 'Enter' },
+    { question: 'Which key can make letters capital?', options: ['Caps Lock', 'Spacebar', 'Enter', 'Backspace'], answer: 'Caps Lock' },
+    { question: 'Which device is used for video calls?', options: ['Webcam', 'Printer', 'Speaker', 'Keyboard'], answer: 'Webcam' },
+    { question: 'What should we do before touching a computer?', options: ['Keep hands clean', 'Use wet hands', 'Eat over it', 'Pull the wires'], answer: 'Keep hands clean' },
+    { question: 'Which is an example of computer software?', options: ['Paint', 'Keyboard', 'Mouse', 'Monitor'], answer: 'Paint' },
+    { question: 'Which device is used to record sound?', options: ['Microphone', 'Monitor', 'Printer', 'Mouse'], answer: 'Microphone' },
+    { question: 'What should we do after using a computer?', options: ['Shut it down properly', 'Pull every cable', 'Hit the monitor', 'Leave food on it'], answer: 'Shut it down properly' },
   ],
 };
 
@@ -531,8 +766,8 @@ function CreateTestPage() {
                 <span className="mb-2 block text-sm font-bold text-[#244238]">
                   Number of questions
                 </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {['5', '10', '15'].map((value) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {['5', '10', '15', '20'].map((value) => (
                     <button
                       type="button"
                       key={value}
@@ -598,7 +833,7 @@ function CreateTestPage() {
 function GenericTestPage() {
   const [, params] = useRoute('/take-test/:subject/:count');
   const subject = decodeURIComponent(params?.subject ?? 'Math');
-  const count = Math.min(Number(params?.count ?? 5), 5);
+  const count = Math.min(Math.max(Number(params?.count ?? 5), 1), 20);
   const questions = genericTestQuestions[subject] ?? [];
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
