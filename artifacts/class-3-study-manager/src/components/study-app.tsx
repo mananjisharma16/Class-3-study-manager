@@ -838,9 +838,14 @@ function GenericTestPage() {
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [retryIndexes, setRetryIndexes] = useState<number[] | null>(null);
 
-  const score = questions
-    .slice(0, count)
+  const allTestQuestions = questions.slice(0, count);
+  const testQuestions = retryIndexes
+    ? retryIndexes.map((index) => allTestQuestions[index]).filter(Boolean)
+    : allTestQuestions;
+
+  const score = testQuestions
     .filter((question, index) => answers[index] === question.answer)
     .length;
 
@@ -853,8 +858,10 @@ function GenericTestPage() {
   }
 
   if (submitted) {
-    const wrong = count - score;
-    const percentage = Math.round((score / count) * 100);
+    const wrong = testQuestions.length - score;
+    const percentage = testQuestions.length
+      ? Math.round((score / testQuestions.length) * 100)
+      : 0;
 
     return (
       <Shell>
@@ -863,7 +870,7 @@ function GenericTestPage() {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Score" value={`${score}`} note="correct" color="#E3F0E9" />
-            <Stat label="Total" value={`${count}`} note="questions" color="#E0F0F4" />
+            <Stat label="Total" value={`${testQuestions.length}`} note="questions" color="#E0F0F4" />
             <Stat label="Percentage" value={`${percentage}%`} note="result" color="#FFF2D9" />
             <Stat label="Wrong" value={`${wrong}`} note="answers" color="#FBE9DF" />
           </div>
@@ -873,7 +880,7 @@ function GenericTestPage() {
           </div>
 
           <div className="mt-5 space-y-3">
-            {questions.slice(0, count).map((question, index) => (
+            {testQuestions.map((question, index) => (
               <div key={index} className="rounded-xl border border-[#EEE5D7] bg-[#FFFDF7] p-4">
                 <p className="text-sm font-bold text-[#244238]">
                   {index + 1}. {question.question}
@@ -888,16 +895,39 @@ function GenericTestPage() {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setAnswers({});
-              setSubmitted(false);
-            }}
-            className="mt-5 min-h-11 rounded-xl border border-[#DCCFBD] px-5 text-xs font-bold text-[#718077]"
-          >
-            Retake test
-          </button>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {wrong > 0 && !retryIndexes && (
+              <button
+                type="button"
+                onClick={() => {
+                  const wrongIndexes = allTestQuestions.reduce<number[]>(
+                    (indexes, question, index) => {
+                      if (answers[index] !== question.answer) indexes.push(index);
+                      return indexes;
+                    },
+                  );
+                  setRetryIndexes(wrongIndexes);
+                  setAnswers({});
+                  setSubmitted(false);
+                }}
+                className="min-h-11 rounded-xl bg-[#244238] px-5 text-xs font-bold text-[#FFF9E9]"
+              >
+                Retest wrong questions ({wrong})
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setRetryIndexes(null);
+                setAnswers({});
+                setSubmitted(false);
+              }}
+              className="min-h-11 rounded-xl border border-[#DCCFBD] px-5 text-xs font-bold text-[#718077]"
+            >
+              Retake full test
+            </button>
+          </div>
         </div>
       </Shell>
     );
@@ -913,10 +943,13 @@ function GenericTestPage() {
           <ArrowLeft size={15} /> Back to Create Test
         </Link>
 
-        <SectionHeading eyebrow={subject} title={`${count}-Question Test`} />
+        <SectionHeading
+          eyebrow={retryIndexes ? `${subject} • Wrong Questions` : subject}
+          title={`${testQuestions.length}-Question Test`}
+        />
 
         <div className="space-y-4">
-          {questions.slice(0, count).map((question, index) => (
+          {testQuestions.map((question, index) => (
             <article
               key={index}
               className="rounded-2xl border border-[#EEE5D7] bg-[#FFFDF7] p-5"
