@@ -1,256 +1,15 @@
 function CreateTestPage() {
-  function GenericTestPage() {
-  const [, params] = useRoute('/take-test/:subjectId');
   const [, navigate] = useLocation();
-
-  const subject =
-    subjects.find((item) => item.id === params?.subjectId) || subjects[0];
-
-  const content = getSubjectContent(subject);
-
-  const questionItems = content.questions as {
-    title: string;
-    detail: string;
-  }[];
-
-  const answerItems = content.answers as {
-    title: string;
-    detail: string;
-  }[];
-
-  const availableQuestions = questionItems.map((question, index) => ({
-    id: `${subject.id}-${index}`,
-    question: question.title,
-    answer:
-      answerItems[index]?.detail ||
-      answerItems[index]?.title ||
-      '',
-  }));
-
-  const requestedCount = Number(
-    new URLSearchParams(window.location.search).get('count') || '5',
-  );
-
-  const questions = availableQuestions.slice(
-    0,
-    Math.min(requestedCount, availableQuestions.length),
-  );
-
-  const [current, setCurrent] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
-
-  const currentQuestion = questions[current];
-
-  if (!currentQuestion) {
-    return (
-      <Shell>
-        <div className="mx-auto max-w-[800px]">
-          <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-8 text-center">
-            <h2 className="display-serif text-3xl font-bold text-[#244238]">
-              No questions available
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-[#718077]">
-              This subject does not have test questions yet.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => navigate('/create-test')}
-              className="mt-6 rounded-xl bg-[#244238] px-5 py-3 text-sm font-bold text-[#FFF9E9]"
-            >
-              Back to Create Test
-            </button>
-          </section>
-        </div>
-      </Shell>
-    );
-  }
-
-  const calculateScore = () => {
-    return questions.filter((item) => {
-      return (
-        normalizeAnswer(answers[item.id] || '') ===
-        normalizeAnswer(item.answer)
-      );
-    }).length;
-  };
-
-  if (submitted) {
-    const score = calculateScore();
-    const percentage = Math.round((score / questions.length) * 100);
-
-    return (
-      <Shell>
-        <div className="mx-auto max-w-[800px] animate-rise-in">
-          <section className="rounded-[25px] border border-[#E9DFCF] bg-[#FFFDF7] p-6 text-center sm:p-10">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E3F0E9] text-[#5A7F72]">
-              <Trophy size={30} />
-            </div>
-
-            <p className="mt-5 text-[10px] font-bold uppercase tracking-[.18em] text-[#D28658]">
-              Test complete
-            </p>
-
-            <h2 className="display-serif mt-2 text-[34px] font-bold text-[#244238]">
-              {subject.name}
-            </h2>
-
-            <p className="mt-4 text-5xl font-bold text-[#244238]">
-              {score}/{questions.length}
-            </p>
-
-            <p className="mt-2 text-sm font-bold text-[#718077]">
-              {percentage}% score
-            </p>
-
-            <div className="mt-8 space-y-3 text-left">
-              {questions.map((item, index) => {
-                const correct =
-                  normalizeAnswer(answers[item.id] || '') ===
-                  normalizeAnswer(item.answer);
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`rounded-xl border p-4 ${
-                      correct
-                        ? 'border-[#CFE1D5] bg-[#EAF5ED]'
-                        : 'border-[#E9D0C7] bg-[#FBE9DF]'
-                    }`}
-                  >
-                    <p className="text-sm font-bold text-[#244238]">
-                      {index + 1}. {item.question}
-                    </p>
-
-                    <p className="mt-2 text-xs text-[#718077]">
-                      Your answer: {answers[item.id] || 'No answer'}
-                    </p>
-
-                    <p className="mt-1 text-xs font-bold text-[#5A7F72]">
-                      Correct answer: {item.answer}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setAnswers({});
-                  setCurrent(0);
-                  setSubmitted(false);
-                }}
-                className="rounded-xl border border-[#DCCFBD] px-5 py-3 text-sm font-bold text-[#718077]"
-              >
-                Retake Test
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate(`/subject/${subject.id}`)}
-                className="rounded-xl bg-[#244238] px-5 py-3 text-sm font-bold text-[#FFF9E9]"
-              >
-                Back to {subject.name}
-              </button>
-            </div>
-          </section>
-        </div>
-      </Shell>
-    );
-  }
-
-  return (
-    <Shell>
-      <div className="mx-auto max-w-[800px] animate-rise-in">
-        <Link
-          href="/create-test"
-          className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980]"
-        >
-          <ArrowLeft size={15} />
-          Back to Create Test
-        </Link>
-
-        <section className="overflow-hidden rounded-[25px] border border-[#E9DFCF] bg-[#FFFDF7]">
-          <div
-            className="p-6 sm:p-9"
-            style={{ backgroundColor: subject.tint }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="rounded-full bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em]">
-                {subject.name}
-              </span>
-
-              <span className="text-xs font-bold text-[#65746C]">
-                Question {current + 1} / {questions.length}
-              </span>
-            </div>
-
-            <h2 className="display-serif mt-8 text-[30px] font-bold leading-tight text-[#244238] sm:text-[38px]">
-              {currentQuestion.question}
-            </h2>
-          </div>
-
-          <div className="p-6 sm:p-9">
-            <label className="block">
-              <span className="mb-2 block text-sm font-bold text-[#244238]">
-                Your answer
-              </span>
-
-              <textarea
-                value={answers[currentQuestion.id] || ''}
-                onChange={(e) =>
-                  setAnswers((old) => ({
-                    ...old,
-                    [currentQuestion.id]: e.target.value,
-                  }))
-                }
-                rows={4}
-                className="w-full rounded-xl border border-[#E3D8C8] bg-[#FFFDF7] p-4 text-sm text-[#244238] outline-none focus:border-[#5A7F72]"
-                placeholder="Type your answer here..."
-              />
-            </label>
-
-            <div className="mt-6 flex justify-end">
-              {current < questions.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setCurrent((value) => value + 1)}
-                  className="flex items-center gap-2 rounded-xl bg-[#244238] px-5 py-3 text-sm font-bold text-[#FFF9E9]"
-                >
-                  Next Question
-                  <ArrowRight size={16} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSubmitted(true)}
-                  className="flex items-center gap-2 rounded-xl bg-[#244238] px-5 py-3 text-sm font-bold text-[#FFF9E9]"
-                >
-                  <Check size={16} />
-                  Submit Test
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
-      </div>
-    </Shell>
-  );
-}
-  const [, navigate] = useLocation();
-  const [subject, setSubject] = useState(subjects[0]?.name || '');
+  const [subject, setSubject] = useState('Math');
   const [count, setCount] = useState('5');
+  const [note, setNote] = useState('');
 
-  const startTest = () => {
-    const selected = subjects.find((item) => item.name === subject);
+  const available = genericTestQuestions[subject]?.length ?? 0;
 
-    if (!selected) return;
+  const createTest = () => {
+    if (!available) return;
 
-    navigate(`/take-test/${selected.id}?count=${count}`);
+    navigate(`/take-test/${encodeURIComponent(subject)}/${count}`);
   };
 
   return (
@@ -271,8 +30,11 @@ function CreateTestPage() {
 
                 <select
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="min-h-12 w-full rounded-xl border border-[#E3D8C8] bg-[#FFFDF7] px-4 text-sm text-[#244238] outline-none focus:border-[#5A7F72]"
+                  onChange={(e) => {
+                    setSubject(e.target.value);
+                    setCount('5');
+                  }}
+                  className="min-h-12 w-full rounded-xl border border-[#E3D8C8] bg-[#FFFDF7] px-4 text-sm text-[#244238] outline-none"
                   data-testid="select-test-subject"
                 >
                   {subjects.map((item) => (
@@ -294,24 +56,49 @@ function CreateTestPage() {
                       type="button"
                       key={value}
                       onClick={() => setCount(value)}
+                      disabled={Number(value) > available}
                       className={`min-h-12 rounded-xl border text-sm font-bold ${
                         count === value
                           ? 'border-[#5A7F72] bg-[#E3F0E9] text-[#244238]'
                           : 'border-[#E3D8C8] text-[#839089]'
+                      } ${
+                        Number(value) > available
+                          ? 'cursor-not-allowed opacity-40'
+                          : ''
                       }`}
-                      data-testid={`button-question-count-${value}`}
                     >
                       {value} questions
                     </button>
                   ))}
                 </div>
+
+                <p className="mt-2 text-[11px] text-[#89938C]">
+                  {available} questions available for {subject}.
+                </p>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-[#244238]">
+                  Test note{' '}
+                  <span className="font-normal text-[#A1A9A1]">
+                    (optional)
+                  </span>
+                </span>
+
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="e.g. Revision before Friday"
+                  className="min-h-12 w-full rounded-xl border border-[#E3D8C8] bg-[#FFFDF7] px-4 text-sm outline-none"
+                />
               </label>
             </div>
 
             <button
               type="button"
-              onClick={startTest}
-              className="mt-8 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#244238] text-sm font-bold text-[#FFF9E9] transition hover:bg-[#31584b]"
+              onClick={createTest}
+              disabled={!available}
+              className="mt-8 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#244238] text-sm font-bold text-[#FFF9E9] disabled:cursor-not-allowed disabled:opacity-40"
               data-testid="button-create-test"
             >
               <Plus size={17} />
@@ -325,14 +112,253 @@ function CreateTestPage() {
             </div>
 
             <h3 className="display-serif mt-5 text-[25px] font-bold text-[#244238]">
-              Ready to practise?
+              A kind test is a helpful test.
             </h3>
 
             <p className="mt-3 text-sm leading-6 text-[#6C766D]">
-              Choose a subject and start your test.
+              Choose a subject, start the test, answer the questions, and
+              submit to see your score.
             </p>
           </aside>
         </div>
+      </div>
+    </Shell>
+  );
+}
+
+function GenericTestPage() {
+  const [, params] = useRoute('/take-test/:subject/:count');
+
+  const subject = decodeURIComponent(params?.subject ?? 'Math');
+  const count = Math.min(Number(params?.count ?? 5), 5);
+
+  const questions = genericTestQuestions[subject] ?? [];
+
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const testQuestions = questions.slice(0, count);
+
+  const score = testQuestions.filter(
+    (question, index) => answers[index] === question.answer,
+  ).length;
+
+  if (!questions.length) {
+    return (
+      <Shell>
+        <div className="mx-auto max-w-[800px]">
+          <section className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-8 text-center">
+            <h2 className="display-serif text-3xl font-bold text-[#244238]">
+              No test questions found.
+            </h2>
+
+            <p className="mt-3 text-sm text-[#718077]">
+              This subject does not have test questions yet.
+            </p>
+
+            <Link
+              href="/create-test"
+              className="mt-6 inline-flex rounded-xl bg-[#244238] px-5 py-3 text-sm font-bold text-[#FFF9E9]"
+            >
+              Back to Create Test
+            </Link>
+          </section>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (submitted) {
+    const wrong = testQuestions.length - score;
+
+    const percentage = Math.round(
+      (score / testQuestions.length) * 100,
+    );
+
+    return (
+      <Shell>
+        <div className="mx-auto max-w-[900px] animate-rise-in">
+          <SectionHeading
+            eyebrow={subject}
+            title="Test Result"
+          />
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat
+              label="Score"
+              value={`${score}`}
+              note="correct"
+              color="#E3F0E9"
+            />
+
+            <Stat
+              label="Total"
+              value={`${testQuestions.length}`}
+              note="questions"
+              color="#E0F0F4"
+            />
+
+            <Stat
+              label="Percentage"
+              value={`${percentage}%`}
+              note="result"
+              color="#FFF2D9"
+            />
+
+            <Stat
+              label="Wrong"
+              value={`${wrong}`}
+              note="answers"
+              color="#FBE9DF"
+            />
+          </div>
+
+          <div className="mt-5 rounded-xl border border-[#CFE1D5] bg-[#EAF5ED] p-5 text-sm font-bold text-[#42725A]">
+            Test complete! You can review the answers below.
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {testQuestions.map((question, index) => {
+              const correct = answers[index] === question.answer;
+
+              return (
+                <div
+                  key={index}
+                  className={`rounded-xl border p-4 ${
+                    correct
+                      ? 'border-[#CFE1D5] bg-[#EAF5ED]'
+                      : 'border-[#E9D0C7] bg-[#FBE9DF]'
+                  }`}
+                >
+                  <p className="text-sm font-bold text-[#244238]">
+                    {index + 1}. {question.question}
+                  </p>
+
+                  <p className="mt-2 text-xs text-[#A4624D]">
+                    Your answer:{' '}
+                    {answers[index] || 'Not answered'}
+                  </p>
+
+                  <p className="mt-1 text-xs font-bold text-[#5A7F72]">
+                    Correct answer: {question.answer}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setAnswers({});
+                setSubmitted(false);
+              }}
+              className="rounded-xl border border-[#DCCFBD] px-5 py-3 text-sm font-bold text-[#718077]"
+            >
+              Retake Test
+            </button>
+
+            <Link
+              href="/create-test"
+              className="rounded-xl bg-[#244238] px-5 py-3 text-sm font-bold text-[#FFF9E9]"
+            >
+              Create Another Test
+            </Link>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell>
+      <div className="mx-auto max-w-[900px] animate-rise-in">
+        <Link
+          href="/create-test"
+          className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#7C8980]"
+        >
+          <ArrowLeft size={15} />
+          Back to Create Test
+        </Link>
+
+        <SectionHeading
+          eyebrow={subject}
+          title="Test"
+        />
+
+        <div className="mb-5 rounded-xl border border-[#E9DFCF] bg-[#FFFDF7] p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-[#244238]">
+              {subject}
+            </span>
+
+            <span className="text-xs font-bold text-[#7C8980]">
+              {testQuestions.length} questions
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {testQuestions.map((question, index) => (
+            <section
+              key={index}
+              className="rounded-2xl border border-[#E9DFCF] bg-[#FFFDF7] p-5 sm:p-7"
+            >
+              <div className="flex gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E3F0E9] text-sm font-bold text-[#244238]">
+                  {index + 1}
+                </span>
+
+                <div className="flex-1">
+                  <h3 className="text-base font-bold leading-6 text-[#244238]">
+                    {question.question}
+                  </h3>
+
+                  <div className="mt-4 space-y-2">
+                    {question.options.map((option: string) => (
+                      <label
+                        key={option}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                          answers[index] === option
+                            ? 'border-[#5A7F72] bg-[#EAF5ED]'
+                            : 'border-[#E3D8C8] bg-[#FFFDF7]'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`question-${index}`}
+                          value={option}
+                          checked={answers[index] === option}
+                          onChange={() =>
+                            setAnswers((old) => ({
+                              ...old,
+                              [index]: option,
+                            }))
+                          }
+                          className="h-4 w-4"
+                        />
+
+                        <span className="text-sm text-[#244238]">
+                          {option}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSubmitted(true)}
+          className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#244238] text-sm font-bold text-[#FFF9E9]"
+        >
+          <Check size={17} />
+          Submit Test
+        </button>
       </div>
     </Shell>
   );
