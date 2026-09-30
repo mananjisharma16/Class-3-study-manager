@@ -491,78 +491,6 @@ const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
   ],
 };
 
-type GenericTestQuestion = {
-  question: string;
-  options: string[];
-  answer: string;
-};
-
-const genericTestQuestions: Record<string, GenericTestQuestion[]> = {
-  'English First': [
-    { question: 'Find the noun: The little bird sings.', options: ['bird', 'sings', 'little', 'the'], answer: 'bird' },
-    { question: 'Choose the pronoun: Ravi is happy because ___ won the game.', options: ['he', 'she', 'it', 'they'], answer: 'he' },
-    { question: 'Which word is an action word?', options: ['run', 'school', 'blue', 'pencil'], answer: 'run' },
-    { question: 'Which word names a person?', options: ['teacher', 'quickly', 'happy', 'jump'], answer: 'teacher' },
-    { question: 'Which word describes a flower?', options: ['beautiful', 'flower', 'garden', 'grow'], answer: 'beautiful' },
-  ],
-  'English Second': [
-    { question: 'What does tiny mean?', options: ['Very small', 'Very big', 'Very loud', 'Very fast'], answer: 'Very small' },
-    { question: 'A good story has a beginning, middle and ___?', options: ['end', 'number', 'colour', 'shape'], answer: 'end' },
-    { question: 'Which mark ends a statement?', options: ['Full stop', 'Comma', 'Question mark', 'Colon'], answer: 'Full stop' },
-    { question: 'Who is a character in a story?', options: ['A person or animal in the story', 'A punctuation mark', 'A number', 'A colour'], answer: 'A person or animal in the story' },
-    { question: 'What helps us understand a new word in a story?', options: ['Context', 'Clock', 'Shape', 'Number'], answer: 'Context' },
-  ],
-  'Hindi First': [
-    { question: '“राम बाजार जाता है।” इसमें संज्ञा शब्द कौन-सा है?', options: ['राम', 'जाता', 'है', 'और'], answer: 'राम' },
-    { question: '“सीमा ___ लड़की है।” सही शब्द चुनिए।', options: ['एक', 'दो', 'हम', 'वे'], answer: 'एक' },
-    { question: '“वह स्कूल जाता है।” में सर्वनाम कौन-सा है?', options: ['वह', 'स्कूल', 'जाता', 'है'], answer: 'वह' },
-    { question: 'एक से अधिक वस्तुओं को क्या कहते हैं?', options: ['बहुवचन', 'एकवचन', 'संज्ञा', 'वाक्य'], answer: 'बहुवचन' },
-    { question: '“किताब” किसका उदाहरण है?', options: ['संज्ञा', 'सर्वनाम', 'क्रिया', 'विशेषण'], answer: 'संज्ञा' },
-  ],
-  'Hindi Second': [
-    { question: 'क__ताब में कौन-सी मात्रा आएगी?', options: ['ि', 'ा', 'ी', 'ु'], answer: 'ि' },
-    { question: '२१ के बाद कौन-सी संख्या आती है?', options: ['२२', '२०', '२३', '१९'], answer: '२२' },
-    { question: '“नीला” में कौन-सी मात्रा है?', options: ['ी', 'ा', 'ि', 'ु'], answer: 'ा' },
-    { question: '१ से १० तक गिनती में ५ के बाद क्या आता है?', options: ['६', '७', '४', '८'], answer: '६' },
-    { question: 'चित्र देखकर वाक्य बनाना क्या कहलाता है?', options: ['चित्र वर्णन', 'गिनती', 'मात्रा', 'संज्ञा'], answer: 'चित्र वर्णन' },
-  ],
-  'Math': [
-    { question: 'What is 3 × 8?', options: ['24', '21', '18', '28'], answer: '24' },
-    { question: 'How many quarters make one whole?', options: ['4', '2', '3', '5'], answer: '4' },
-    { question: 'What is 20 ÷ 5?', options: ['4', '5', '10', '15'], answer: '4' },
-    { question: 'How many sides does a hexagon have?', options: ['6', '5', '7', '8'], answer: '6' },
-    { question: 'What is half of 10?', options: ['5', '2', '10', '8'], answer: '5' },
-  ],
-  'Math Second': [
-    { question: 'What time is half past 4?', options: ['4:30', '4:15', '5:00', '3:30'], answer: '4:30' },
-    { question: 'How many ₹5 coins make ₹25?', options: ['5', '4', '6', '10'], answer: '5' },
-    { question: 'Which hand shows minutes on a clock?', options: ['Long hand', 'Short hand', 'Both', 'Neither'], answer: 'Long hand' },
-    { question: 'How many ₹10 coins make ₹50?', options: ['5', '4', '6', '10'], answer: '5' },
-    { question: 'Which is longer?', options: ['1 metre', '1 centimetre', '1 millimetre', 'None'], answer: '1 metre' },
-  ],
-  'EVS': [
-    { question: 'Name one source of clean water.', options: ['River', 'Chair', 'Book', 'Pencil'], answer: 'River' },
-    { question: 'Which part of a plant takes in water from soil?', options: ['Roots', 'Flower', 'Fruit', 'Leaf'], answer: 'Roots' },
-    { question: 'Which part supports a plant?', options: ['Stem', 'Root', 'Seed', 'Flower'], answer: 'Stem' },
-    { question: 'Which is a source of water?', options: ['Lake', 'Table', 'Bag', 'Door'], answer: 'Lake' },
-    { question: 'Why should we save water?', options: ['Water is important for life', 'Water is a toy', 'Water is a book', 'Water is a colour'], answer: 'Water is important for life' },
-  ],
-  'GK': [
-    { question: 'What is the national animal of India?', options: ['Bengal tiger', 'Lion', 'Elephant', 'Horse'], answer: 'Bengal tiger' },
-    { question: 'What is the capital of India?', options: ['New Delhi', 'Mumbai', 'Kolkata', 'Jaipur'], answer: 'New Delhi' },
-    { question: 'Which planet do we live on?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], answer: 'Earth' },
-    { question: 'Which animal is known for having a long trunk?', options: ['Elephant', 'Tiger', 'Rabbit', 'Horse'], answer: 'Elephant' },
-    { question: 'What shines in the sky at night?', options: ['Moon', 'Tree', 'River', 'Road'], answer: 'Moon' },
-  ],
-  'Computer': [
-    { question: 'Which device helps us type letters?', options: ['Keyboard', 'Mouse', 'Monitor', 'Speaker'], answer: 'Keyboard' },
-    { question: 'Which device helps us point and click?', options: ['Mouse', 'Keyboard', 'Monitor', 'CPU'], answer: 'Mouse' },
-    { question: 'Which part shows information?', options: ['Monitor', 'Keyboard', 'Mouse', 'CPU'], answer: 'Monitor' },
-    { question: 'Which part does the main computer work?', options: ['CPU', 'Mouse', 'Keyboard', 'Monitor'], answer: 'CPU' },
-    { question: 'Why should we take screen breaks?', options: ['To rest our eyes and body', 'To play more', 'To make the screen bigger', 'To turn the keyboard off'], answer: 'To rest our eyes and body' },
-  ],
-};
-
 function CreateTestPage() {
   const [, navigate] = useLocation();
   const [subject, setSubject] = useState('Math');
@@ -827,11 +755,17 @@ function SwitchRoutes() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/subject/:subjectId/chapter/:chapterId" component={ChapterPage} />
+      <Route
+        path="/subject/:subjectId/chapter/:chapterId"
+        component={ChapterPage}
+      />
       <Route path="/subject/:subjectId" component={SubjectPage} />
       <Route path="/practice" component={PracticePage} />
       <Route path="/create-test" component={CreateTestPage} />
-      <Route path="/take-test/:subject/:count" component={GenericTestPage} />
+      <Route
+        path="/take-test/:subject/:count"
+        component={GenericTestPage}
+      />
       <Route path="/upload-photo" component={UploadPage} />
       <Route path="/test-results" component={ResultsPage} />
       <Route path="/progress" component={ProgressPage} />
